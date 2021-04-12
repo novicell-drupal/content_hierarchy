@@ -1,0 +1,8 @@
+name: 'Content Hierarchy Breadcrumb'
+type: module
+description: 'Creates breadcrumbs based on content hierarchy'
+core_version_requirement: ^8.8 || ^9
+package: 'Content'
+dependencies:
+  - entity_hierarchy_breadcrumb
+  - content_hierarchy

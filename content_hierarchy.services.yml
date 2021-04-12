@@ -1,0 +1,7 @@
+services:
+  content_hierarchy:
+    class: Drupal\content_hierarchy\ContentHierarchy
+    arguments: ['@entity_hierarchy.nested_set_storage_factory', '@entity_hierarchy.nested_set_node_factory', '@entity_hierarchy.entity_tree_node_mapper', '@entity_field.manager']
+  content_hierarchy.data:
+    class: Drupal\content_hierarchy\ContentHierarchyData
+    arguments: ['@database', '@request_stack', '@config.factory', '@entity_type.manager', '@language_manager']

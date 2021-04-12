@@ -1,0 +1,91 @@
+# Danish translation of Content Hierarchy (all releases)
+# Copyright (c) 2021 Novicell
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Content Hierarchy (all releases)\n"
+"POT-Creation-Date: 2021-01-25 11:59+0000\n"
+"PO-Revision-Date: 2021-01-25 13:08+0100\n"
+"Language-Team: Danish\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n!=1);\n"
+"Last-Translator: \n"
+"Language: da\n"
+"X-Generator: Poedit 1.8.11\n"
+
+msgid "Content Hierarchy"
+msgstr "Indholdshierarki"
+
+msgid "Provides the functionality to organize nodes in a tree/hierarchy."
+msgstr "Tilføjer funktionaliteten til at organisere noder i et træ/hierarki."
+
+msgid "Hierarchy"
+msgstr "Hierarki"
+
+msgid "All content"
+msgstr "Alt indhold"
+
+msgid "Content tree"
+msgstr "Indholdstræ"
+
+msgid "Content"
+msgstr "Indhold"
+
+msgid "Content Hierarchy Settings"
+msgstr "Indholdshierarki indstillinger"
+
+msgid "Content Hierarchy settings"
+msgstr "Indholdshierarki indstillinger"
+
+msgid "Configure how the content hierarchy works and what nodes are included in the hierarchy lists."
+msgstr "Konfigurér hvordan indholdshierarkiet virker og hvilke indholdstyper er indkluderet i hierarki lister."
+
+msgid "Settings for the DDS Content Hierarchy module."
+msgstr "Indstillinger til DDS Indholdshierarki modulet."
+
+msgid "Add content"
+msgstr "Tilføj indhold"
+
+msgid "Title"
+msgstr "Titel"
+
+msgid "Type"
+msgstr "Type"
+
+msgid "Status"
+msgstr "Status"
+
+msgid "Author"
+msgstr "Forfatter"
+
+msgid "Created"
+msgstr "Oprettet"
+
+msgid "Changed"
+msgstr "Ændret"
+
+msgid "Operations"
+msgstr "Handlinger"
+
+msgid "Hierarchy select"
+msgstr "Hierarki vælger"
+
+msgid "A select field sorted by hierarchy tree."
+msgstr "Et valg-felt sorteret efter hierarki træ."
+
+msgid "Ignore these nodes on the content lists"
+msgstr "Ignorér disse indholdstyper på indholdslisten"
+
+msgid "Content Hierarchy Overview"
+msgstr "Indholdshierarki Oversigt"
+
+msgid "Published"
+msgstr "Udgivet"
+
+msgid "Unpublished"
+msgstr "Upubliceret"
+
+msgid "Frontpage"
+msgstr "Forside"

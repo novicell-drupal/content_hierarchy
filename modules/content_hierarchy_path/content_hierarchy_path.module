@@ -1,0 +1,99 @@
+<?php
+
+/**
+ * @file
+ * Contains content_hierarchy_path.module.
+ */
+
+use Drupal\Core\Render\BubbleableMetadata;
+use Drupal\Core\Routing\RouteMatchInterface;
+use Drupal\content_hierarchy\ContentHierarchyUtils;
+
+/**
+ * Implements hook_help().
+ */
+function content_hierarchy_path_help($route_name, RouteMatchInterface $route_match) {
+  switch ($route_name) {
+    // Main module help for the content_hierarchy_path module.
+    case 'help.page.content_hierarchy_path':
+      $output = '';
+      $output .= '<h3>' . t('About') . '</h3>';
+      $output .= '<p>' . t('Creates url aliases based on content hierarchy') . '</p>';
+      return $output;
+
+    default:
+  }
+}
+
+/**
+ * Implements hook_token_info()
+ */
+function content_hierarchy_path_token_info() {
+
+  $type = [
+    'name' => t('Content hierarchy'),
+    'description' => t('Tokens related to individual content items, or "nodes".'),
+    'needs-data' => 'node',
+  ];
+
+  //  $tokens['ancestors'] = [
+  //    'name' => t('Hierarchy ancestors'),
+  //    'description' => t('Hierarchy ancestors'),
+  //  ];
+
+  $tokens['ancestors-joined-path'] = [
+    'name' => t('Hierarchy ancestors joined paths'),
+    'description' => t('Hierarchy ancestors path joined'),
+  ];
+
+  return [
+    'types' => ['node' => $type],
+    'tokens' => ['node' => $tokens],
+  ];
+}
+
+/**
+ * Implements hook_tokens().
+ */
+function content_hierarchy_path_tokens($type, $tokens, array $data, array $options, BubbleableMetadata $bubbleable_metadata) {
+  $replacements = [];
+
+  if ($type == 'node') {
+    foreach ($tokens as $name => $original) {
+      // Find the desired token by name.
+      switch ($name) {
+        case 'ancestors-joined-path':
+          /** @var \Drupal\node\Entity\Node $node */
+          $node = $data['node'];
+          $ancestors = \Drupal::service('content_hierarchy')
+            ->getAncestors($node);
+          $menu_link_manager = \Drupal::service('plugin.manager.menu.link');
+          $frontpage = ContentHierarchyUtils::getFrontpageEntity();
+
+
+          $items = [];
+          foreach ($ancestors as $ancestor) {
+
+            // We set the frontpage link later. So if nodes are children of the
+            // frontpage it would show up twice
+            if ((!is_null($frontpage) && $frontpage instanceof \Drupal\Core\Entity\ContentEntityInterface) && $ancestor->id() == $frontpage->id()) {
+              continue;
+            }
+
+            if($result = $menu_link_manager->loadLinksByRoute('entity.node.canonical', array('node' => $ancestor->id()))) {
+              $item = (reset($result)->getTitle());
+            } else {
+              $item = $ancestor->label();
+            }
+
+            $items[] = \Drupal::service('pathauto.alias_cleaner')
+              ->cleanString($item, $options);
+          }
+
+          $replacements[$original] = implode('/', $items);
+          break;
+      }
+    }
+  }
+  return $replacements;
+}

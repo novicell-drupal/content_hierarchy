@@ -1,0 +1,12 @@
+content_hierarchy:
+  version: VERSION
+  css:
+    theme:
+      css/content_hierarchy.css: {}
+
+ajax-commands:
+  version: 1.0
+  js:
+    js/ajax-commands.js: {}
+  dependencies:
+  - core/drupal.ajax

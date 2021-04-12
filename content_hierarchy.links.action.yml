@@ -1,0 +1,5 @@
+content_hierarchy.add_page:
+  route_name: node.add_page
+  title: 'Add content'
+  appears_on:
+    - content_hierarchy.content_overview

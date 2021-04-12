@@ -1,0 +1,9 @@
+name: 'Content Hierarchy Path'
+type: module
+description: 'Creates url aliases based on content hierarchy'
+core_version_requirement: ^8.8 || ^9
+package: Content
+dependencies:
+  - content_hierarchy
+  - pathauto
+  - token

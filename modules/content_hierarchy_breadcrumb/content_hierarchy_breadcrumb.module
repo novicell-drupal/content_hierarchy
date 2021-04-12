@@ -1,0 +1,35 @@
+<?php
+
+/**
+ * @file
+ * Contains merc_content_hierarchy_breadcrumb.module.
+ */
+
+use Drupal\Core\Routing\RouteMatchInterface;
+
+/**
+ * Implements hook_help().
+ */
+function content_hierarchy_breadcrumb_help($route_name, RouteMatchInterface $route_match) {
+  switch ($route_name) {
+    // Main module help for the content_hierarchy_breadcrumb module.
+    case 'help.page.content_hierarchy_breadcrumb':
+      $output = '';
+      $output .= '<h3>' . t('About') . '</h3>';
+      $output .= '<p>' . t('Creates breadcrumbs based on content hierarchy') . '</p>';
+      return $output;
+
+    default:
+  }
+}
+
+/**
+ * Implements hook_theme().
+ */
+function content_hierarchy_breadcrumb_theme() {
+  return [
+    'content_hierarchy_breadcrumb' => [
+      'render element' => 'children',
+    ],
+  ];
+}

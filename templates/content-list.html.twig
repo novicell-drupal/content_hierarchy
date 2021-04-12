@@ -1,0 +1,33 @@
+<ul{{ attributes }}>
+  {%- for item in items -%}
+    <li id="{{ item.id }}" class="content-hierarchy__item">
+      <div class="content-hierarchy__content">
+        <div class="content-hierarchy__column content-hierarchy__title">
+          <span class="content-hierarchy__expand">{{ item.expand }}</span>
+          {{ item.title }}
+        </div>
+        <div class="content-hierarchy__column content-hierarchy__column-align-right">
+          {{ item.content_type }}
+        </div>
+        <div class="content-hierarchy__column content-hierarchy__column-align-right">
+          {{ item.status }}
+        </div>
+        <div class="content-hierarchy__column content-hierarchy__column-align-right">
+          {{ item.author }}
+        </div>
+        <div class="content-hierarchy__column content-hierarchy__column-align-right">
+          {{ item.created|format_date('short') }}
+        </div>
+        <div class="content-hierarchy__column content-hierarchy__column-align-right">
+          {{ item.changed|format_date('short') }}
+        </div>
+        <div class="content-hierarchy__column content-hierarchy__column-align-right content-hierarchy__actions">
+          {{ item.actions }}
+        </div>
+      </div>
+      <div class="content-hierarchy__children">
+        {{ item.children }}
+      </div>
+    </li>
+  {%- endfor -%}
+</ul>

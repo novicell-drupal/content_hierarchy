@@ -1,29 +1,24 @@
-# README #
+# Content Hierarchy #
+This module provides the content editor with a way to organize her content and bring structure to the site
+using an approach familiar to many people used to Umbraco.
 
-This README would normally document whatever steps are necessary to get your application up and running.
+## Hooks exposed by this module ##
+**Altering the content list:**
+```php
+// Alter the content list query
+HOOK_query_content_hierarchy_content_list_alter()
 
-### What is this repository for? ###
+// Alter or replace the items returned by the content list
+HOOK_content_hierarchy_content_list_alter($items)
+```
 
-* Quick summary
-* Version
-* [Learn Markdown](https://bitbucket.org/tutorials/markdowndemo)
+## Submodules ##
+This module provides the following submodules:
 
-### How do I get set up? ###
+#### Content Hierarchy Path ####
+This module creates a pathauto pattern, that will generate URL aliases for nodes, based on the nodes placement in
+the content hierarchy.
 
-* Summary of set up
-* Configuration
-* Dependencies
-* Database configuration
-* How to run tests
-* Deployment instructions
-
-### Contribution guidelines ###
-
-* Writing tests
-* Code review
-* Other guidelines
-
-### Who do I talk to? ###
-
-* Repo owner or admin
-* Other community or team contact
+#### Content Hierarchy Breadcrumb ####
+This module generates a breadcrumb, based on the nodes placement in the content hierarchy, by extending the
+functionality in the entity_hierarchy_breadcrumb module.

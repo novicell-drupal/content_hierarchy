@@ -1,0 +1,29 @@
+<?php
+
+function content_hierarchy_path_install() {
+  //create pattern
+  $new = \Drupal\pathauto\Entity\PathautoPattern::create([
+    'id' => 'content_hierarchy_pattern',
+    'label' => 'Content Hierarchy Pattern',
+    'type' => 'canonical_entities:node',
+    'pattern' => '[node:ancestors-joined-path]/[node:title]',
+    'weight' => 0,
+    'status' => true
+  ]);
+  $new->addSelectionCondition([
+    'id' => 'node_type',
+    'bundles' => [
+      'basic_page' => 'basic_page',
+    ],
+    'negate' => false,
+    'context_mapping' => ['node' => 'node'],
+  ]);
+  $new->save();
+
+  //allow slashes in pattern tokens
+  $config_factory = \Drupal::configFactory();
+  $settings = $config_factory->get('pathauto.settings')->get('punctuation');
+  $settings['slash'] = 2;
+  $config_factory->getEditable('pathauto.settings')->set('punctuation', $settings)->save();
+
+}
