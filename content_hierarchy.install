@@ -20,8 +20,8 @@ function content_hierarchy_install() {
       ->save();
   }
 
-  if(isset($existing_node_types['basic_page'])) {
-    $entity_form_display = \Drupal::service('entity_display.repository')->getFormDisplay('node', 'basic_page', 'default');
+  if(isset($existing_node_types['page'])) {
+    $entity_form_display = \Drupal::service('entity_display.repository')->getFormDisplay('node', 'page', 'default');
     // the function entity_get_form_display is deprecated - replace with the line below, after switching to 8.8
     //$entity_form_display = $display_repository->getFormDisplay('node', 'special_page');
     $entity_form_display->setComponent('field_parent', [
@@ -36,7 +36,7 @@ function content_hierarchy_uninstall() {
 
   try {
 
-    $field = \Drupal\field\Entity\FieldConfig::loadByName('node', 'basic_page', 'field_parent');
+    $field = \Drupal\field\Entity\FieldConfig::loadByName('node', 'page', 'field_parent');
     if($field) {
       $field->delete();
     }

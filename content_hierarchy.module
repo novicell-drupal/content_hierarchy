@@ -5,6 +5,7 @@
  * Contains merc_content_hierarchy.module.
  */
 
+use Drupal\content_hierarchy\ContentHierarchyUtils;
 use Drupal\Core\Cache\Cache;
 use Drupal\Core\Entity\ContentEntityInterface;
 use Drupal\Core\Routing\RouteMatchInterface;
@@ -99,6 +100,10 @@ function content_hierarchy_form_node_form_alter(&$form, \Drupal\Core\Form\FormSt
     // remove 403 and 404 pages as parent options
     $config = \Drupal::config('content_hierarchy.hierarchy_settings');
     $system_pages = $config->get();
+    $frontpage = ContentHierarchyUtils::getFrontpageEntity();
+    if (!empty($frontpage)) {
+      $system_pages['field_frontpage'] = $frontpage->id();
+    }
     //todo: add multilingual support
     if (!empty($system_pages)) {
       if(isset($options[$system_pages['node_403']])) {
@@ -109,22 +114,16 @@ function content_hierarchy_form_node_form_alter(&$form, \Drupal\Core\Form\FormSt
       }
     }
 
-    if(strpos($form_id, 'node_special_page') === false) {
-      // if parent is required, remove the _none option, since it's obsolete
-      if(isset($options['_none']) && $form['field_parent']['widget'][0]['target_id']['#required'] == true) {
-        unset($options['_none']);
-      }
-
-      // use frontpage as default parent option
-      if(!empty($system_pages) && empty($form['field_parent']['widget'][0]['target_id']['#default_value'])) {
-        $form['field_parent']['widget'][0]['target_id']['#default_value'] = $system_pages['field_frontpage'];
-      }
-
-      // use zero as default value for weight
-      if(empty($form['field_parent']['widget'][0]['weight']['#default_value'])) {
-        $form['field_parent']['widget'][0]['weight']['#default_value'] = 0;
-      }
+    // use frontpage as default parent option
+    if(!empty($system_pages) && empty($form['field_parent']['widget'][0]['target_id']['#default_value'])) {
+      $form['field_parent']['widget'][0]['target_id']['#default_value'] = $system_pages['field_frontpage'];
     }
+
+    // use zero as default value for weight
+    if(empty($form['field_parent']['widget'][0]['weight']['#default_value'])) {
+      $form['field_parent']['widget'][0]['weight']['#default_value'] = 0;
+    }
+
     $form['field_parent']['widget'][0]['target_id']['#options'] = $options;
   }
 }
