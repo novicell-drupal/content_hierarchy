@@ -5,7 +5,9 @@
  * Contains merc_content_hierarchy.module.
  */
 
+use Drupal\Core\Cache\Cache;
 use Drupal\Core\Routing\RouteMatchInterface;
+use Drupal\node\Entity\Node;
 
 /**
  * Implements hook_help().
@@ -159,5 +161,40 @@ function content_hierarchy_page_attachments_alter(array &$page) {
   $user = \Drupal::currentUser();
   if ($user->hasPermission('access toolbar')) {
     $page['#attached']['library'][] = 'content_hierarchy/content_hierarchy';
+  }
+}
+
+/**
+ * Invalidate tag on node save.
+ * @param \Drupal\Core\Entity\EntityInterface $entity
+ */
+function content_hierarchy_entity_insert(Drupal\Core\Entity\EntityInterface $entity) {
+  _content_hierarchy_clear_cache_tags($entity);
+}
+
+/**
+ * Invalidate tag on node update.
+ * @param \Drupal\Core\Entity\EntityInterface $entity
+ */
+function content_hierarchy_entity_update(Drupal\Core\Entity\EntityInterface $entity) {
+  _content_hierarchy_clear_cache_tags($entity);
+}
+
+/**
+ * Invalidate tag on node delete.
+ * @param \Drupal\Core\Entity\EntityInterface $entity
+ */
+function content_hierarchy_entity_delete(Drupal\Core\Entity\EntityInterface $entity) {
+  _content_hierarchy_clear_cache_tags($entity);
+}
+
+/**
+ * @param \Drupal\Core\Entity\EntityInterface $entity
+ */
+function _content_hierarchy_clear_cache_tags(\Drupal\Core\Entity\EntityInterface $entity): void {
+  if ($entity->hasField('field_parent') && !$entity->get('field_parent')->isEmpty()) {
+    Cache::invalidateTags([
+      'hierarchy:parent:' . $entity->get('field_parent')->target_id
+    ]);
   }
 }

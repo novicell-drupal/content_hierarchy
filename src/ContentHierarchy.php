@@ -1,5 +1,4 @@
 <?php
-
 namespace Drupal\content_hierarchy;
 
 use Drupal\Core\Entity\ContentEntityInterface;
@@ -7,13 +6,8 @@ use Drupal\Core\Entity\EntityFieldManagerInterface;
 use Drupal\entity_hierarchy\Storage\EntityTreeNodeMapperInterface;
 use Drupal\entity_hierarchy\Storage\NestedSetNodeKeyFactory;
 use Drupal\entity_hierarchy\Storage\NestedSetStorageFactory;
+use Drupal\node\Entity\Node;
 
-/**
- * Created by PhpStorm.
- * User: pve
- * Date: 21/11/2018
- * Time: 13.26
- */
 class ContentHierarchy {
 
   /**
@@ -110,5 +104,37 @@ class ContentHierarchy {
     }
 
     return NULL;
+  }
+
+  public function getChildrenOfParent(ContentEntityInterface $entity) {
+    // TODO
+  }
+
+  /**
+   * @param int $parent_id
+   *
+   * @return ContentEntityInterface[]
+   */
+  public function getChildrenOfParentID($parent_id) {
+    $node_ids = \Drupal::database()
+      ->select('node__field_parent', 't')
+      ->fields('t', ['entity_id'])
+      ->condition('t.field_parent_target_id', $parent_id)
+      ->orderBy('t.field_parent_weight', 'ASC')
+      ->execute()
+      ->fetchCol();
+
+    if (!empty($node_ids)) {
+      $nodes = [];
+      /** @var Node $node */
+      foreach (Node::loadMultiple($node_ids) as $node) {
+        if($node->access()) {
+          $nodes[] = $node;
+        }
+      }
+      return $nodes;
+    } else {
+      return [];
+    }
   }
 }
