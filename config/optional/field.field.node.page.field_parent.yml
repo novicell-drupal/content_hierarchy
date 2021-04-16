@@ -3,13 +3,13 @@ status: true
 dependencies:
   config:
     - field.storage.node.field_parent
-    - node.type.basic_page
+    - node.type.page
   module:
     - entity_hierarchy
-id: node.basic_page.field_parent
+id: node.page.field_parent
 field_name: field_parent
 entity_type: node
-bundle: basic_page
+bundle: page
 label: Parent
 description: ''
 required: true
@@ -20,12 +20,12 @@ settings:
   handler: 'default:node'
   handler_settings:
     target_bundles:
-      basic_page: basic_page
+      page: page
 
     sort:
       field: _none
     auto_create: false
-    auto_create_bundle: basic_page
+    auto_create_bundle: page
   weight_min: -50
   weight_max: 50
   weight_label: Weight
