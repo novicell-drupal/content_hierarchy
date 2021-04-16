@@ -13,7 +13,7 @@ function content_hierarchy_path_install() {
   $new->addSelectionCondition([
     'id' => 'node_type',
     'bundles' => [
-      'basic_page' => 'basic_page',
+      'page' => 'page',
     ],
     'negate' => false,
     'context_mapping' => ['node' => 'node'],

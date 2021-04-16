@@ -106,10 +106,10 @@ function content_hierarchy_form_node_form_alter(&$form, \Drupal\Core\Form\FormSt
     }
     //todo: add multilingual support
     if (!empty($system_pages)) {
-      if(isset($options[$system_pages['node_403']])) {
+      if(isset($options[$system_pages['node_403'] ?? 0])) {
         unset($options[$system_pages['node_403']]);
       }
-      if(isset($options[$system_pages['node_404']])) {
+      if(isset($options[$system_pages['node_404'] ?? 0])) {
         unset($options[$system_pages['node_404']]);
       }
     }
