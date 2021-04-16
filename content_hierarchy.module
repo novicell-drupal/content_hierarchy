@@ -6,6 +6,7 @@
  */
 
 use Drupal\Core\Cache\Cache;
+use Drupal\Core\Entity\ContentEntityInterface;
 use Drupal\Core\Routing\RouteMatchInterface;
 use Drupal\node\Entity\Node;
 
@@ -192,7 +193,7 @@ function content_hierarchy_entity_delete(Drupal\Core\Entity\EntityInterface $ent
  * @param \Drupal\Core\Entity\EntityInterface $entity
  */
 function _content_hierarchy_clear_cache_tags(\Drupal\Core\Entity\EntityInterface $entity): void {
-  if ($entity->hasField('field_parent') && !$entity->get('field_parent')->isEmpty()) {
+  if ($entity instanceof ContentEntityInterface && $entity->hasField('field_parent') && !$entity->get('field_parent')->isEmpty()) {
     Cache::invalidateTags([
       'hierarchy:parent:' . $entity->get('field_parent')->target_id
     ]);
