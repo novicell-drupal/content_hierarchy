@@ -158,6 +158,7 @@ class ContentHierarchyData {
     }
 
     $nodes = Node::loadMultiple($nids);
+    $langcode = \Drupal::languageManager()->getCurrentLanguage()->getId();
 
     $items = [];
     /** @var \Drupal\Core\Entity\EntityListBuilderInterface $list_builder */
@@ -165,6 +166,9 @@ class ContentHierarchyData {
 
     foreach ($result as $page) {
       $node = $nodes[$page->nid];
+      if ($node->hasTranslation($langcode)) {
+        $node = $node->getTranslation($langcode);
+      }
       $nid = $page->nid;
       $expand = NULL;
 
@@ -185,7 +189,7 @@ class ContentHierarchyData {
       ];
 
       $items[] = [
-        'title' => Link::fromTextAndUrl($page->title, Url::fromRoute('entity.node.canonical', ['node' => $nid]))->toRenderable(),
+        'title' => Link::fromTextAndUrl($node->label(), $node->toUrl())->toRenderable(),
         'content_type' => ContentHierarchyUtils::getNodeType($page->type),
         'author' => isset($page->uid) ? ContentHierarchyUtils::getAuthorLink($page->uid) : NULL,
         'status' => ((boolean) $page->status) ? $this->t('Published') : $this->t('Unpublished'),

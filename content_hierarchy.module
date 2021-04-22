@@ -115,7 +115,7 @@ function content_hierarchy_form_node_form_alter(&$form, \Drupal\Core\Form\FormSt
     }
 
     // use frontpage as default parent option
-    if(!empty($system_pages) && empty($form['field_parent']['widget'][0]['target_id']['#default_value'])) {
+    if(!empty($system_pages) && isset($system_pages['field_frontpage']) && empty($form['field_parent']['widget'][0]['target_id']['#default_value'])) {
       $form['field_parent']['widget'][0]['target_id']['#default_value'] = $system_pages['field_frontpage'];
     }
 
