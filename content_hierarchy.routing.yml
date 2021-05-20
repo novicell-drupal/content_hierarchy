@@ -14,10 +14,9 @@ content_hierarchy.content_overview:
   requirements:
     _permission: 'access content overview'
 
-content_hierarchy.ajax:
-  path: '/admin/content/hierarchy/ajax/{parent_id}'
+content_hierarchy.select:
+  path: '/admin/content/hierarchy/ajax/select/{langcode}/{current_lang}/{placement}'
   defaults:
-    _controller: '\Drupal\content_hierarchy\Controller\ContentOverviewController::AjaxResponse'
+    _controller: '\Drupal\content_hierarchy\Controller\ContentHierarchyController::contentHierarchySelect'
   requirements:
     _permission: 'access content overview'
-    parent_id: '[0-9]+'

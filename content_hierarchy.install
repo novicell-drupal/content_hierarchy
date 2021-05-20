@@ -1,56 +1,93 @@
 <?php
 
-use Drupal\Core\Entity\EntityInterface;
+/**
+ * Implements hook_schema().
+ */
+function content_hierarchy_schema() {
+  $schema['content_hierarchy'] = [
+    'description' => 'Content hierarchy storage.',
+    'fields' => [
+      'content_id' => [
+        'description' => 'ID for content.',
+        'type' => 'serial',
+        'not null' => TRUE,
+      ],
+      'source' => [
+        'description' => 'Source for the this content',
+        'type' => 'varchar',
+        'length' => 12,
+        'not null' => TRUE,
+        'default' => 'entity'
+      ],
+      'type' => [
+        'description' => 'The type or bundle of this content',
+        'type' => 'varchar',
+        'length' => 64,
+        'not null' => TRUE,
+      ],
+      'entity_id' => [
+        'description' => 'Entity ID for this content',
+        'type' => 'int',
+        'unsigned' => TRUE
+      ]
+    ],
+    'primary key' => ['content_id']
+  ];
+
+  $schema['content_hierarchy_tree'] = [
+    'description' => 'Content hierarchy storage.',
+    'fields' => [
+      'content_id' => [
+        'description' => 'ID for content.',
+        'type' => 'int',
+        'not null' => TRUE,
+      ],
+      'langcode' => [
+        'description' => 'The language code used for this content',
+        'type' => 'varchar',
+        'length' => '12',
+        'not null' => TRUE,
+        'default' => 'und',
+      ],
+      'parent_id' => [
+        'description' => 'Parent ID for this content',
+        'type' => 'int'
+      ],
+      'weight' => [
+        'description' => 'weight for this content',
+        'type' => 'int'
+      ],
+      'root' => [
+        'description' => 'Whether the content is a root',
+        'type' => 'int',
+        'size' => 'tiny',
+        'default' => 0
+      ],
+      'excluded' => [
+        'description' => 'Whether the content is excluded',
+        'type' => 'int',
+        'size' => 'tiny',
+        'default' => 0
+      ]
+    ],
+    'primary key' => ['content_id', 'langcode'],
+    'indexes' => [
+      'langcode' => [
+        'langcode',
+      ],
+      'parent_id' => [
+        'parent_id',
+      ],
+    ],
+  ];
+
+  return $schema;
+}
 
 function content_hierarchy_install() {
-
-  /** @var \Drupal\Core\Entity\EntityDisplayRepositoryInterface $display_repository */
-  $display_repository = \Drupal::service('entity_display.repository');
-
-  // Assign widget settings for the default form mode.
-
-  $existing_node_types = node_type_get_names();
-  if(isset($existing_node_types['special_page'])) {
-    $entity_form_display = \Drupal::service('entity_display.repository')->getFormDisplay('node', 'special_page', 'default');
-    // the function entity_get_form_display is deprecated - replace with the line below, after switching to 8.8
-    //$entity_form_display = $display_repository->getFormDisplay('node', 'special_page');
-    $entity_form_display->setComponent('field_parent', [
-      'type' => 'entity_reference_hierarchy_select'
-    ])
-      ->save();
-  }
-
-  if(isset($existing_node_types['page'])) {
-    $entity_form_display = \Drupal::service('entity_display.repository')->getFormDisplay('node', 'page', 'default');
-    // the function entity_get_form_display is deprecated - replace with the line below, after switching to 8.8
-    //$entity_form_display = $display_repository->getFormDisplay('node', 'special_page');
-    $entity_form_display->setComponent('field_parent', [
-      'type' => 'entity_reference_hierarchy_select'
-    ])
-      ->save();
-  }
 
 }
 
 function content_hierarchy_uninstall() {
-
-  try {
-
-    $field = \Drupal\field\Entity\FieldConfig::loadByName('node', 'page', 'field_parent');
-    if($field) {
-      $field->delete();
-    }
-    $field = \Drupal\field\Entity\FieldConfig::loadByName('node', 'special_page', 'field_parent');
-    if($field) {
-      $field->delete();
-    }
-    $field_storage = \Drupal\field\Entity\FieldStorageConfig::loadByName('node', 'field_parent');
-    if($field_storage) {
-      $field_storage->delete();
-    }
-
-  } catch (\Drupal\Core\Entity\EntityStorageException $e) {
-    error_log($e->getMessage());
-  }
 
 }

@@ -33,41 +33,14 @@ msgstr "Indholdstræ"
 msgid "Content"
 msgstr "Indhold"
 
-msgid "Content Hierarchy Settings"
-msgstr "Indholdshierarki indstillinger"
-
 msgid "Content Hierarchy settings"
 msgstr "Indholdshierarki indstillinger"
 
 msgid "Configure how the content hierarchy works and what nodes are included in the hierarchy lists."
 msgstr "Konfigurér hvordan indholdshierarkiet virker og hvilke indholdstyper er indkluderet i hierarki lister."
 
-msgid "Settings for the DDS Content Hierarchy module."
-msgstr "Indstillinger til DDS Indholdshierarki modulet."
-
-msgid "Add content"
-msgstr "Tilføj indhold"
-
-msgid "Title"
-msgstr "Titel"
-
-msgid "Type"
-msgstr "Type"
-
-msgid "Status"
-msgstr "Status"
-
-msgid "Author"
-msgstr "Forfatter"
-
-msgid "Created"
-msgstr "Oprettet"
-
-msgid "Changed"
-msgstr "Ændret"
-
-msgid "Operations"
-msgstr "Handlinger"
+msgid "Settings for the Content Hierarchy module."
+msgstr "Indstillinger til Indholdshierarki modulet."
 
 msgid "Hierarchy select"
 msgstr "Hierarki vælger"
@@ -78,14 +51,23 @@ msgstr "Et valg-felt sorteret efter hierarki træ."
 msgid "Ignore these nodes on the content lists"
 msgstr "Ignorér disse indholdstyper på indholdslisten"
 
-msgid "Content Hierarchy Overview"
-msgstr "Indholdshierarki Oversigt"
+msgid "Content Hierarchy overview"
+msgstr "Indholdshierarki oversigt"
 
-msgid "Published"
-msgstr "Udgivet"
+msgid "Placement: @placement"
+msgstr "Placering: @placement"
 
-msgid "Unpublished"
-msgstr "Upubliceret"
+msgid "Content hierarchy for @language"
+msgstr "Indholdstræ for @language"
 
-msgid "Frontpage"
-msgstr "Forside"
+msgid "Tokens related to individual content items."
+msgstr "Symboler relateret til individuelle elementer."
+
+msgid "Hierarchy ancestors joined paths"
+msgstr "Herakiske forældres samlede sti"
+
+msgid "Hierarchy ancestors path joined"
+msgstr "Herakiske forældres sti samlet"
+
+msgid "Creates url aliases based on content hierarchy"
+msgstr "Skaber url aliaser baseret på indholdsherakiet"

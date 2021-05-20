@@ -6,7 +6,7 @@ content_hierarchy.content_overview:
   weight: -10
 
 content_hierarchy.hierarchy_settings:
-  title: 'Content Hierarchy Settings'
+  title: 'Content Hierarchy settings'
   route_name: content_hierarchy.hierarchy_settings
   description: 'Settings for the Content Hierarchy module.'
-  parent: dds.config
+  parent: system.admin_config_content

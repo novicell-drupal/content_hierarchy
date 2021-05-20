@@ -2,9 +2,16 @@
 
 namespace Drupal\content_hierarchy\Plugin\Field\FieldWidget;
 
+use Drupal\content_hierarchy\ContentHierarchy;
+use Drupal\content_hierarchy\ContentHierarchyData;
+use Drupal\content_hierarchy\ContentHierarchyStorage;
+use Drupal\content_hierarchy\ContentHierarchyWidgets;
 use Drupal\Core\Database\Connection;
 use Drupal\Core\Entity\FieldableEntityInterface;
 use Drupal\Core\Field\FieldDefinitionInterface;
+use Drupal\Core\Field\FieldItemListInterface;
+use Drupal\Core\Field\WidgetBase;
+use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Plugin\ContainerFactoryPluginInterface;
 use Drupal\Core\Routing\CurrentRouteMatch;
 use Drupal\Core\Session\AccountProxyInterface;
@@ -19,35 +26,32 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  *   label = @Translation("Content Hierarchy select"),
  *   description = @Translation("A select field sorted by hierarchy tree."),
  *   field_types = {
- *     "entity_reference_hierarchy"
+ *     "content_hierarchy"
  *   }
  * )
  */
-class ContentHierarchySelect extends EntityReferenceHierarchySelect implements ContainerFactoryPluginInterface {
+class ContentHierarchySelect extends WidgetBase implements ContainerFactoryPluginInterface {
 
   /**
-   * The account.
+   * Content Hierarchy data service
    *
-   * @var \Drupal\Core\Session\AccountInterface
-   *    The current user.
+   * @var \Drupal\content_hierarchy\ContentHierarchyData
    */
-  private $currentUser;
+  protected $data;
 
   /**
-   * The database.
+   * Content Hierarchy storage service
    *
-   * @var\Drupal\Core\Database\Connection
-   *   The connection object.
+   * @var \Drupal\content_hierarchy\ContentHierarchyStorage
    */
-  private $database;
+  protected $storage;
 
   /**
-   * The current route match.
+   * Content Hierarchy widgets service
    *
-   * @var \Drupal\Core\Routing\CurrentRouteMatch
-   *    The current route.
+   * @var \Drupal\content_hierarchy\ContentHierarchyWidgets
    */
-  private $currentRouteMatch;
+  protected $widgets;
 
   /**
    * DdsEntityReferenceHierarchySelect constructor.
@@ -57,85 +61,15 @@ class ContentHierarchySelect extends EntityReferenceHierarchySelect implements C
    * @param \Drupal\Core\Field\FieldDefinitionInterface $field_definition
    * @param array $settings
    * @param array $third_party_settings
-   * @param \Drupal\Core\Session\AccountProxyInterface $currentUser
-   * @param \Drupal\Core\Database\Connection $database
-   * @param \Drupal\Core\Routing\CurrentRouteMatch $currentRouteMatch
+   * @param \Drupal\content_hierarchy\ContentHierarchyStorage $storage
+   * @param \Drupal\content_hierarchy\ContentHierarchyData $data
    */
-  public function __construct($plugin_id, $plugin_definition, FieldDefinitionInterface $field_definition, array $settings, array $third_party_settings, AccountProxyInterface $currentUser, Connection $database, CurrentRouteMatch $currentRouteMatch) {
+  public function __construct($plugin_id, $plugin_definition, FieldDefinitionInterface $field_definition, array $settings, array $third_party_settings, ContentHierarchyStorage $storage, ContentHierarchyData $data, ContentHierarchyWidgets $widgets) {
     parent::__construct($plugin_id, $plugin_definition, $field_definition, $settings, $third_party_settings);
-    $this->currentUser = $currentUser;
-    $this->database = $database;
-    $this->currentRouteMatch = $currentRouteMatch;
+    $this->storage = $storage;
+    $this->data = $data;
+    $this->widgets = $widgets;
   }
-
-  protected function generateHierarchyTree($level, $parent, $items, $field) {
-    $options = [];
-    $prefix = str_repeat('--', $level);
-    foreach ($items as $item) {
-      if($item->$field == $parent) {
-        $options[$item->nid] = $prefix.$item->title;
-        $options = $options + $this->generateHierarchyTree($level+1, $item->nid, $items, $field);
-      }
-    }
-    return $options;
-  }
-
-  /**
-   * Returns the array of options for the widget.
-   *
-   * @param \Drupal\Core\Entity\FieldableEntityInterface $entity
-   *   The entity for which to return options.
-   *
-   * @return array
-   *   The array of options for the widget.
-   */
-  protected function getOptions(FieldableEntityInterface $entity) {
-    if(!$entity->isNew()) {
-      $langcode = $entity->language()->getId();
-    }
-
-    $options = [];
-
-    if (!isset($this->options)) {
-      $nids = $this->fieldDefinition
-        ->getFieldStorageDefinition()
-        ->getOptionsProvider($this->column, $entity)
-        ->getSettableValues($this->currentUser);
-
-      $nodes = [];
-      if (!empty($nids)) {
-        $config = \Drupal::config('content_hierarchy.hierarchy_settings');
-
-        if(($key = array_search($config->get('node_403'), $nids)) !== false) {
-          unset($nids[$key]);
-        }
-        if(($key = array_search($config->get('node_404'), $nids)) !== false) {
-          unset($nids[$key]);
-        }
-
-        $query = $this->database->select('node_field_data', 'n');
-        $query->leftJoin('node__field_parent', 'p', 'n.nid = p.entity_id');
-        $query->condition('n.nid', $nids, 'IN');
-        $query->fields('n', ['nid', 'title']);
-        $query->fields('p', ['field_parent_target_id']);
-        $query->orderBy('p.field_parent_weight');
-        $query->orderBy('n.title');
-
-        if(!empty($langcode)) {
-          $query->condition('n.langcode', $langcode);
-        }
-
-        $nodes = $query->execute()->fetchAll();
-      }
-
-      $options = ['_none' => $this->t('No parent')];
-      $options += $this->generateHierarchyTree(0, NULL, $nodes, 'field_parent_target_id');
-    }
-
-    return $options;
-
-  }
-
 
   /**
    * Creates an instance of the plugin.
@@ -159,11 +93,75 @@ class ContentHierarchySelect extends EntityReferenceHierarchySelect implements C
       $configuration['field_definition'],
       $configuration['settings'],
       $configuration['third_party_settings'],
-      $container->get('current_user'),
-      $container->get('database'),
-      $container->get('current_route_match')
+      $container->get('content_hierarchy.storage'),
+      $container->get('content_hierarchy.data'),
+      $container->get('content_hierarchy.widgets')
     );
+  }
 
+  public function formElement(FieldItemListInterface $items, $delta, array $element, array &$form, FormStateInterface $form_state) {
+    $entity = $items->getEntity();
+    $placement = isset($items[$delta]->value) ? $items[$delta]->value : -1;
+
+    if(!$entity->isNew()) {
+      $langcode = $entity->language()->getId();
+      $content_id = $this->data->findEntity($entity);
+      $placement = $this->data->getContentPlacement($content_id, $langcode);
+    } else {
+      $langcode = 'und';
+    }
+
+    $element += [
+      '#type' => 'details',
+      '#open' => $entity->isNew(),
+      'settings' => []
+    ];
+
+    // Put the form element into the form's "advanced" group.
+    $element['#group'] = 'advanced';
+
+    if ($entity->isNew() || $placement > -2) {
+      $element += [
+        '#attached' => [
+          'library' => [
+            'content_hierarchy/contentHierarchySelect',
+          ],
+        ],
+      ];
+      $element['new_parent'] = [
+        '#attributes' => ['class' => ['content-hierarchy-select']],
+        '#type' => 'select',
+        '#default_value' => $placement,
+        '#options' => $this->widgets->getAllOptions(),
+        '#element_validate' => [
+          [$this, 'validate'],
+        ],
+      ];
+      $element['current_parent'] = array(
+        '#attributes' => ['class' => ['content-hierarchy-current']],
+        '#type' => 'hidden',
+        '#default_value' => json_encode([
+          'langcode' => $langcode,
+          'placement' => $placement,
+        ])
+      );
+    } else {
+      $content = $this->storage->load($content_id, $langcode);
+      $element['description'] = [
+        '#type' => 'item',
+        '#title' => $this->t('Placement: @placement', ['@placement' => $this->widgets->placementToText($content)]),
+        '#description' => $this->t('Can be changed in the content overview page')
+      ];
+    }
+
+    return $element;
+  }
+
+  /**
+   * Validate the color text field.
+   */
+  public function validate($element, FormStateInterface $form_state) {
+    // TODO: Validate if a position creates endless loops
   }
 
 }

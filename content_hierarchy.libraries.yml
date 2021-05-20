@@ -4,9 +4,7 @@ content_hierarchy:
     theme:
       css/content_hierarchy.css: {}
 
-ajax-commands:
-  version: 1.0
+contentHierarchySelect:
+  version: VERSION
   js:
-    js/ajax-commands.js: {}
-  dependencies:
-  - core/drupal.ajax
+    js/contentHierarchySelect.js: {}

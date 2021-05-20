@@ -2,11 +2,11 @@ name: Content Hierarchy
 description: 'Provides the functionality to organize nodes in a tree/hierarchy.'
 package: Content
 type: module
+version: 1.0
 core_version_requirement: ^8.8 || ^9
 configure: content_hierarchy.hierarchy_settings
 
 dependencies:
-  - entity_hierarchy:entity_hierarchy
   - drupal:node
 
 interface translation project: content_hierarchy
