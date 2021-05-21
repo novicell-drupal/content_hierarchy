@@ -158,7 +158,7 @@ class ContentHierarchyData {
   /**
    * @param int $content_id
    *
-   * @return array
+   * @return array|bool
    */
   public function getContent($content_id) {
     return $this->database->select('content_hierarchy', 'ch')
@@ -171,17 +171,22 @@ class ContentHierarchyData {
   /**
    * @param int $content_id
    *
-   * @return array
+   * @return array|bool
    */
   public function getContentAndPlacement($content_id, $langcode = NULL) {
     $langcode = $this->correctLangCode($langcode);
     $content = $this->getContent($content_id);
-    $content += $this->database->select('content_hierarchy_placement', 'chp')
-      ->condition('content_id', $content_id)
-      ->condition('langcode', $langcode)
-      ->fields('chp')
-      ->execute()
-      ->fetchAssoc();
+    if ($content !== FALSE) {
+      $extra = $this->database->select('content_hierarchy_placement', 'chp')
+        ->condition('content_id', $content_id)
+        ->condition('langcode', $langcode)
+        ->fields('chp')
+        ->execute()
+        ->fetchAssoc();
+      if ($extra !== FALSE) {
+        $content += $extra;
+      }
+    }
     return $content;
   }
   /**

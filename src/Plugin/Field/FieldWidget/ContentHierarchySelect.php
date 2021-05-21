@@ -120,7 +120,7 @@ class ContentHierarchySelect extends WidgetBase implements ContainerFactoryPlugi
     // Put the form element into the form's "advanced" group.
     $element['#group'] = 'advanced';
 
-    if ($entity->isNew() || $placement > -2) {
+    if ($entity->isNew() || $placement === NULL || $placement > -2) {
       $element += [
         '#attached' => [
           'library' => [

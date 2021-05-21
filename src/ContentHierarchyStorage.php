@@ -71,8 +71,10 @@ class ContentHierarchyStorage {
     $result = [];
     foreach ($ids as $content_id) {
       $content = $this->data->getContentAndPlacement($content_id, $langcode);
-      $this->populateContent($content);
-      $result[$content_id] = new ContentHierarchy($content);
+      if ($content !== FALSE) {
+        $this->populateContent($content);
+        $result[$content_id] = new ContentHierarchy($content);
+      }
     }
     return $result;
   }
@@ -237,7 +239,7 @@ class ContentHierarchyStorage {
     $tags = [
       'content_hierarchy_list:' . $langcode
     ];
-    foreach ($config->get('entity_bundles') as $entity_type => $bundle) {
+    foreach ($config->get('entity_bundles') ?? [] as $entity_type => $bundle) {
       $tags[] = $entity_type . '_list';
     }
     return $tags;
