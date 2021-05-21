@@ -34,7 +34,7 @@ function content_hierarchy_schema() {
     'primary key' => ['content_id']
   ];
 
-  $schema['content_hierarchy_tree'] = [
+  $schema['content_hierarchy_placement'] = [
     'description' => 'Content hierarchy storage.',
     'fields' => [
       'content_id' => [
