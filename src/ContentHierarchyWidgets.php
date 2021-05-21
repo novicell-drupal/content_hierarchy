@@ -76,6 +76,7 @@ class ContentHierarchyWidgets {
         return $this->t('Root');
       default:
         $ancestors = $this->storage->findAncestors($content);
+        $ancestors[$content->id()] = $content;
         $result = '';
         foreach ($ancestors as $ancestor) {
           if (!empty($result)) {

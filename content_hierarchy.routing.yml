@@ -2,7 +2,7 @@ content_hierarchy.hierarchy_settings:
   path: '/admin/content/hierarchy/settings'
   defaults:
     _form: '\Drupal\content_hierarchy\Form\ContentHierarchySettingsForm'
-    _title: 'Content hierarchy settings'
+    _title: 'Content Hierarchy settings'
   requirements:
     _permission: 'administer content_hierarchy'
 

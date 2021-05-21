@@ -73,8 +73,10 @@ function content_hierarchy_path_tokens($type, $tokens, array $data, array $optio
             break;
           }
 
+          $ancestors = $storage->findAncestors($content);
+          $ancestors[$content->id()] = $content;
           $items = [];
-          foreach ($storage->findAncestors($content) as $content_ancestor) {
+          foreach ($ancestors as $content_ancestor) {
             if ($content_ancestor->isExcluded() || $content_ancestor->isRoot()) {
               continue;
             }

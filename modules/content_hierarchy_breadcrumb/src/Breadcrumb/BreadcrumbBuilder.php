@@ -74,6 +74,7 @@ class BreadcrumbBuilder implements BreadcrumbBuilderInterface {
 
       $content = $this->contentHierarchyStorage->loadFromEntity($route_entity);
       $ancestors = $this->contentHierarchyStorage->findAncestors($content);
+      $ancestors[$content->id()] = $content;
       $breadcrumb->addCacheTags(['content_hierarchy_placement:' . $content->id() . ':' . $content->getLangcode()]);
 
       $links = [];

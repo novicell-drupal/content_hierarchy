@@ -96,12 +96,21 @@ class ContentHierarchyStorage {
    * @return \Drupal\content_hierarchy\ContentHierarchy[]
    */
   public function findAncestors(ContentHierarchy $content) {
-    $ancestors = [$content->id() => $content];
+    $ancestors = [];
     while($content->getParentId() > 0) {
       $content = $this->load($content->getParentId(), $content->getLangcode());
       $ancestors[$content->id()] = $content;
     }
     return array_reverse($ancestors);
+  }
+
+  /**
+   * @param \Drupal\content_hierarchy\ContentHierarchy $content
+   *
+   * @return \Drupal\content_hierarchy\ContentHierarchy[]
+   */
+  public function findChildren(ContentHierarchy $content) {
+    return $this->loadMultiple($this->data->getChildrenOf($content->id(), $content->getLangcode(), FALSE));
   }
 
   /**

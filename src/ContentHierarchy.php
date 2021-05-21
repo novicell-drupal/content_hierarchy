@@ -333,7 +333,9 @@ class ContentHierarchy {
    */
   public function getChildren(): array {
     if (is_null($this->children)) {
-      // TODO
+      /** @var \Drupal\content_hierarchy\ContentHierarchyStorage $storage */
+      $storage = \Drupal::service('content_hierarchy.storage');
+      $this->children = $storage->findChildren($this);
     }
     return $this->children;
   }
