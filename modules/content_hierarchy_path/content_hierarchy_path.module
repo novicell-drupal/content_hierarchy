@@ -32,7 +32,7 @@ function content_hierarchy_path_token_info() {
 
   $type = [
     'name' => t('Content hierarchy'),
-    'description' => t('Tokens related to individual content items, or "nodes".'),
+    'description' => t('Tokens related to individual content items.'),
     'needs-data' => 'node',
   ];
 
@@ -59,35 +59,27 @@ function content_hierarchy_path_tokens($type, $tokens, array $data, array $optio
   $replacements = [];
 
   if ($type == 'node') {
+    /** @var \Drupal\content_hierarchy\ContentHierarchyStorage $storage */
+    $storage = \Drupal::service('content_hierarchy.storage');
+    $cleaner = \Drupal::service('pathauto.alias_cleaner');
     foreach ($tokens as $name => $original) {
       // Find the desired token by name.
       switch ($name) {
         case 'ancestors-joined-path':
           /** @var \Drupal\node\Entity\Node $node */
           $node = $data['node'];
-          $ancestors = \Drupal::service('content_hierarchy')
-            ->getAncestors($node);
-          $menu_link_manager = \Drupal::service('plugin.manager.menu.link');
-          $frontpage = ContentHierarchyUtils::getFrontpageEntity();
-
+          $content = $storage->loadFromEntity($node);
+          if (is_null($content)) {
+            break;
+          }
 
           $items = [];
-          foreach ($ancestors as $ancestor) {
-
-            // We set the frontpage link later. So if nodes are children of the
-            // frontpage it would show up twice
-            if ((!is_null($frontpage) && $frontpage instanceof \Drupal\Core\Entity\ContentEntityInterface) && $ancestor->id() == $frontpage->id()) {
+          foreach ($storage->findAncestors($content) as $content_ancestor) {
+            if ($content_ancestor->isExcluded() || $content_ancestor->isRoot()) {
               continue;
             }
 
-            if($result = $menu_link_manager->loadLinksByRoute('entity.node.canonical', array('node' => $ancestor->id()))) {
-              $item = (reset($result)->getTitle());
-            } else {
-              $item = $ancestor->label();
-            }
-
-            $items[] = \Drupal::service('pathauto.alias_cleaner')
-              ->cleanString($item, $options);
+            $items[] = $cleaner->cleanString($content_ancestor->label(), $options);
           }
 
           $replacements[$original] = implode('/', $items);

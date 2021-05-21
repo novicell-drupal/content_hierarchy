@@ -9,8 +9,6 @@
   "homepage": "https://www.novicell.dk",
   "minimum-stability": "dev",
   "require": {
-    "drupal/entity_hierarchy": "^2.0",
-    "drupal/ctools": "~3.0",
     "drupal/token": "~1.0",
     "drupal/pathauto": "~1.0"
   }

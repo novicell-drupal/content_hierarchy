@@ -9,7 +9,6 @@ use Drupal\content_hierarchy\ContentHierarchyUtils;
 use Drupal\Core\Cache\Cache;
 use Drupal\Core\Entity\ContentEntityInterface;
 use Drupal\Core\Routing\RouteMatchInterface;
-use Drupal\node\Entity\Node;
 
 /**
  * Implements hook_help().
@@ -41,91 +40,29 @@ function content_hierarchy_locale_translation_projects_alter(&$projects) {
  */
 function content_hierarchy_theme() {
   return [
-    'content_overview' => [
+    'content_options' => [
       'variables' => [
-        'list' => NULL,
-        'title' => '',
-      ],
-    ],
-    'content_list' => [
-      'variables' => [
-        'items' => [],
-        'attributes' => []
+        'langcode' => NULL,
+        'placement' => -1
       ],
     ],
   ];
 }
 
 /**
- * Implements hook_form_FORM_ID_alter().
+ * Implements hook_preprocess().
  */
-function content_hierarchy_form_node_form_alter(&$form, \Drupal\Core\Form\FormStateInterface $form_state, $form_id) {
-  //only administrators should be able to edit the hierarchy of special pages
-  if (
-    isset($form['field_parent']) &&
-    strpos($form_id, 'node_special_page') && !
-    \Drupal::currentUser()->hasPermission('administer nodes')
-  ) {
-      unset($form['field_parent']);
-  }
-  // We should only do it if the node actually has the parent field.
-  if (!empty($form['field_parent'])) {
-    if (!isset($form['field_parent']['widget'][0]['target_id']['#options'])) {
-      return;
-    }
-
-    // move the field_parent field to the advanced column for better admin UX
-    $form['hierarchy'] = [
-      '#type' => 'details',
-      '#title' => t('Hierarchy'),
-      '#group' => 'advanced',
-      '#attributes' => [
-        'class' => [
-          'node-form-options'
-        ],
-      ],
-      '#attached' => [
-        'library' => [
-          'node/drupal.node'
-        ],
-      ],
-      '#weight' => -10,
-      '#open' => TRUE
-    ];
-
-    $form['field_parent']['#group'] = 'hierarchy';
-
-    $options = $form['field_parent']['widget'][0]['target_id']['#options'];
-
-    // remove 403 and 404 pages as parent options
-    $config = \Drupal::config('content_hierarchy.hierarchy_settings');
-    $system_pages = $config->get();
-    $frontpage = ContentHierarchyUtils::getFrontpageEntity();
-    if (!empty($frontpage)) {
-      $system_pages['field_frontpage'] = $frontpage->id();
-    }
-    //todo: add multilingual support
-    if (!empty($system_pages)) {
-      if(isset($options[$system_pages['node_403'] ?? 0])) {
-        unset($options[$system_pages['node_403']]);
-      }
-      if(isset($options[$system_pages['node_404'] ?? 0])) {
-        unset($options[$system_pages['node_404']]);
-      }
-    }
-
-    // use frontpage as default parent option
-    if(!empty($system_pages) && isset($system_pages['field_frontpage']) && empty($form['field_parent']['widget'][0]['target_id']['#default_value'])) {
-      $form['field_parent']['widget'][0]['target_id']['#default_value'] = $system_pages['field_frontpage'];
-    }
-
-    // use zero as default value for weight
-    if(empty($form['field_parent']['widget'][0]['weight']['#default_value'])) {
-      $form['field_parent']['widget'][0]['weight']['#default_value'] = 0;
-    }
-
-    $form['field_parent']['widget'][0]['target_id']['#options'] = $options;
-  }
+function content_hierarchy_preprocess_content_options(&$variables, $hook) {
+  $langcode = $variables['langcode'];
+  $placement = $variables['placement'];
+  /** @var \Drupal\content_hierarchy\ContentHierarchyWidgets $widgets */
+  $widgets = \Drupal::service('content_hierarchy.widgets');
+  /** @var \Drupal\content_hierarchy\ContentHierarchyStorage $storage */
+  $storage = \Drupal::service('content_hierarchy.storage');
+  $variables['items'] = $widgets->getRenderableOptions($langcode, $placement);
+  $variables['#cache'] = [
+    'tags' => $storage->getListCacheTags($langcode)
+  ];
 }
 
 /**
@@ -165,36 +102,28 @@ function content_hierarchy_page_attachments_alter(array &$page) {
 }
 
 /**
- * Invalidate tag on node save.
+ * Remove content from hierarchy and invalidate tags on entity delete.
  * @param \Drupal\Core\Entity\EntityInterface $entity
  */
-function content_hierarchy_entity_insert(Drupal\Core\Entity\EntityInterface $entity) {
-  _content_hierarchy_clear_cache_tags($entity);
-}
-
-/**
- * Invalidate tag on node update.
- * @param \Drupal\Core\Entity\EntityInterface $entity
- */
-function content_hierarchy_entity_update(Drupal\Core\Entity\EntityInterface $entity) {
-  _content_hierarchy_clear_cache_tags($entity);
+function content_hierarchy_entity_delete(Drupal\Core\Entity\EntityInterface $entity) {
+  /** @var \Drupal\content_hierarchy\ContentHierarchyStorage $storage */
+  $storage = \Drupal::service('content_hierarchy.storage');
+  if ($storage->isEntityInHierarchy($entity)) {
+    $storage->deleteEntityFromHierarchy($entity);
+  }
 }
 
 /**
  * Invalidate tag on node delete.
  * @param \Drupal\Core\Entity\EntityInterface $entity
  */
-function content_hierarchy_entity_delete(Drupal\Core\Entity\EntityInterface $entity) {
-  _content_hierarchy_clear_cache_tags($entity);
-}
-
 /**
- * @param \Drupal\Core\Entity\EntityInterface $entity
+ * Implements hook_entity_insert().
  */
-function _content_hierarchy_clear_cache_tags(\Drupal\Core\Entity\EntityInterface $entity): void {
-  if ($entity instanceof ContentEntityInterface && $entity->hasField('field_parent') && !$entity->get('field_parent')->isEmpty()) {
-    Cache::invalidateTags([
-      'hierarchy:parent:' . $entity->get('field_parent')->target_id
-    ]);
+function content_hierarchy_entity_insert(Drupal\Core\Entity\EntityInterface $entity) {
+  /** @var \Drupal\content_hierarchy\ContentHierarchyStorage $storage */
+  $storage = \Drupal::service('content_hierarchy.storage');
+  if ($storage->isEntityInHierarchy($entity)) {
+    Cache::invalidateTags(['content_hierarchy_list:' . $entity->language()->getId()]);
   }
 }

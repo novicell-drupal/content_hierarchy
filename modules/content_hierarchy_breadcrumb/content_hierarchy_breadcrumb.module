@@ -22,14 +22,3 @@ function content_hierarchy_breadcrumb_help($route_name, RouteMatchInterface $rou
     default:
   }
 }
-
-/**
- * Implements hook_theme().
- */
-function content_hierarchy_breadcrumb_theme() {
-  return [
-    'content_hierarchy_breadcrumb' => [
-      'render element' => 'children',
-    ],
-  ];
-}

@@ -1,0 +1,5 @@
+{% for item in items %}
+  <option value="{{ item.key }}" {{ item.selected }}>
+    {{ item.prefix }}{{ item.value }}{{ item.suffix }}
+  </option>
+{% endfor %}

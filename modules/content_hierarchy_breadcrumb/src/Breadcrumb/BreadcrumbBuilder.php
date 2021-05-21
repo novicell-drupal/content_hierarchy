@@ -2,17 +2,46 @@
 
 namespace Drupal\content_hierarchy_breadcrumb\Breadcrumb;
 
+use Drupal\content_hierarchy\ContentHierarchyStorage;
 use Drupal\Core\Breadcrumb\Breadcrumb;
-use Drupal\Core\Entity\ContentEntityInterface;
+use Drupal\Core\Breadcrumb\BreadcrumbBuilderInterface;
+use Drupal\Core\Entity\EntityInterface;
 use Drupal\Core\Link;
+use Drupal\Core\Routing\AdminContext;
 use Drupal\Core\Routing\RouteMatchInterface;
-use Drupal\Core\StringTranslation\StringTranslationTrait;
-use Drupal\content_hierarchy\ContentHierarchyUtils;
-use Drupal\entity_hierarchy_breadcrumb\HierarchyBasedBreadcrumbBuilder;
+use Symfony\Component\Routing\Route;
 
-class BreadcrumbBuilder extends HierarchyBasedBreadcrumbBuilder {
+class BreadcrumbBuilder implements BreadcrumbBuilderInterface {
 
-  use StringTranslationTrait;
+  /**
+   * The admin context service.
+   *
+   * @var \Drupal\Core\Routing\AdminContext
+   */
+  protected $adminContext;
+
+  /**
+   * Content Hierarchy storage service
+   *
+   * @var \Drupal\content_hierarchy\ContentHierarchyStorage
+   */
+  protected $contentHierarchyStorage;
+
+  /**
+   * HierarchyBasedBreadcrumbBuilder constructor.
+   *
+   * @param AdminContext $admin_context
+   *   The admin context service.
+   * @param ContentHierarchyStorage $contentHierarchyStorage
+   *   Content Hierarchy storage service.
+   */
+  public function __construct(
+    AdminContext $admin_context,
+    ContentHierarchyStorage $contentHierarchyStorage
+  ) {
+    $this->adminContext = $admin_context;
+    $this->contentHierarchyStorage = $contentHierarchyStorage;
+  }
 
   /**
    * Whether this breadcrumb builder should be used to build the breadcrumb.
@@ -30,7 +59,7 @@ class BreadcrumbBuilder extends HierarchyBasedBreadcrumbBuilder {
     }
 
     $route_entity = $this->getEntityFromRouteMatch($route_match);
-    if (!$route_entity || !$route_entity instanceof ContentEntityInterface || !$this->getHierarchyFieldFromEntity($route_entity)) {
+    if (!$route_entity || !$this->contentHierarchyStorage->isEntityInHierarchy($route_entity)) {
       return FALSE;
     }
 
@@ -41,48 +70,83 @@ class BreadcrumbBuilder extends HierarchyBasedBreadcrumbBuilder {
     $breadcrumb = new Breadcrumb();
     /** @var \Drupal\Core\Entity\ContentEntityInterface $route_entity */
     $route_entity = $this->getEntityFromRouteMatch($route_match);
-    $breadcrumb->addCacheableDependency($route_match->getRouteObject());
-    $frontpage = ContentHierarchyUtils::getFrontpageEntity();
+    if ($route_entity && $this->contentHierarchyStorage->isEntityInHierarchy($route_entity)) {
 
-    $entity_type = $route_entity->getEntityTypeId();
-    $storage = $this->storageFactory->get($this->getHierarchyFieldFromEntity($route_entity), $entity_type);
-    $ancestors = $storage->findAncestors($this->nodeKeyFactory->fromEntity($route_entity));
-    // Pass in the breadcrumb object for caching.
-    $ancestor_entities = $this->mapper->loadAndAccessCheckEntitysForTreeNodes($entity_type, $ancestors, $breadcrumb);
+      $content = $this->contentHierarchyStorage->loadFromEntity($route_entity);
+      $ancestors = $this->contentHierarchyStorage->findAncestors($content);
+      $breadcrumb->addCacheTags(['content_hierarchy_placement:' . $content->id() . ':' . $content->getLangcode()]);
 
-    $links = [];
-    foreach ($ancestor_entities as $ancestor_entity) {
-      if (!$ancestor_entities->contains($ancestor_entity)) {
-        // Doesn't exist or is access hidden.
-        continue;
+      $links = [];
+      foreach ($ancestors as $content_ancestor) {
+        if ($content_ancestor->isExcluded()) {
+          // Is excluded from hierarchy
+          continue;
+        }
+
+        /** @var EntityInterface $entity */
+        $entity = $content_ancestor->getEntity();
+        $breadcrumb->addCacheableDependency($entity);
+
+        // Show just the label for the entity from the route.
+        if ($entity->id() == $route_entity->id()) {
+          $links[] = Link::createFromRoute($entity->label(), '<none>');
+        }
+        else {
+          $links[] = $entity->toLink();
+        }
       }
 
-      $entity = $ancestor_entities->offsetGet($ancestor_entity);
+      /*if (count($links) > 2) {
+        $links = array_slice($links, -2);
+        array_unshift($links, Link::createFromRoute('...', '<none>'));
+      }*/
 
-      // We set the frontpage link later. So if nodes are children of the
-      // frontpage it would show up twice
-      if ((!is_null($frontpage) && $frontpage instanceof ContentEntityInterface) && $entity->id() == $frontpage->id()) {
-        continue;
-      }
-
-      // Show just the label for the entity from the route.
-      if ($entity->id() == $route_entity->id()) {
-        $links[] = Link::createFromRoute($entity->label(), '<none>');
-      }
-      else {
-        $links[] = $entity->toLink();
-      }
+      $breadcrumb->setLinks($links);
     }
-
-    if (count($links) > 2) {
-      $links = array_slice($links, -2);
-      array_unshift($links, Link::createFromRoute('...', '<none>'));
-    }
-
-    array_unshift($links, Link::createFromRoute($this->t('Frontpage'), '<front>'));
-
-    $breadcrumb->setLinks($links);
     return $breadcrumb;
   }
 
+  /**
+   * Return the entity type id from a route object.
+   *
+   * @param \Symfony\Component\Routing\Route $route
+   *   The route object.
+   *
+   * @return string|null
+   *   The entity type id, null if it doesn't exist.
+   */
+  protected function getEntityTypeFromRoute(Route $route) {
+    if (!empty($route->getOptions()['parameters'])) {
+      foreach ($route->getOptions()['parameters'] as $option) {
+        if (isset($option['type']) && strpos($option['type'], 'entity:') === 0) {
+          return substr($option['type'], strlen('entity:'));
+        }
+      }
+    }
+
+    return NULL;
+  }
+
+  /**
+   * Returns an entity parameter from a route match object.
+   *
+   * @param \Drupal\Core\Routing\RouteMatchInterface $route_match
+   *   The route match.
+   *
+   * @return \Drupal\Core\Entity\EntityInterface|null
+   *   The entity, or null if it's not an entity route.
+   */
+  protected function getEntityFromRouteMatch(RouteMatchInterface $route_match) {
+    $route = $route_match->getRouteObject();
+    if (!$route) {
+      return NULL;
+    }
+
+    $entity_type_id = $this->getEntityTypeFromRoute($route);
+    if ($entity_type_id) {
+      return $route_match->getParameter($entity_type_id);
+    }
+
+    return NULL;
+  }
 }

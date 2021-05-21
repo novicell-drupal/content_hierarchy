@@ -4,6 +4,8 @@ namespace Drupal\content_hierarchy\Form;
 
 use Drupal\Core\Form\ConfigFormBase;
 use Drupal\Core\Form\FormStateInterface;
+use Drupal\field\Entity\FieldConfig;
+use Drupal\field\Entity\FieldStorageConfig;
 use Drupal\node\Entity\NodeType;
 
 class ContentHierarchySettingsForm extends ConfigFormBase {
@@ -40,7 +42,7 @@ class ContentHierarchySettingsForm extends ConfigFormBase {
 
     $form['#tree'] = TRUE;
     $form['settings'] = [
-      '#type' => 'details',
+      '#type' => 'item',
       '#open' => TRUE,
       '#title' => $this->t('Content Hierarchy settings'),
       '#description' => $this->t(
@@ -50,64 +52,146 @@ class ContentHierarchySettingsForm extends ConfigFormBase {
       '#suffix' => '</div>',
     ];
 
+    $bundles = $config->get('entity_bundles') ?? [];
+
     $options = [];
     foreach(NodeType::loadMultiple() as $id => $node_type) {
       $options[$id] = $node_type->label();
     }
-    $form['settings']['ignored_nodes'] = [
+
+    $form['entity_bundles']['node'] = array(
       '#type' => 'checkboxes',
-      '#title' => $this->t('Ignore these nodes on the content lists'),
+      '#title' => $this->t('Content types'),
+      '#description' => $this->t(''),
       '#options' => $options,
-      '#default_value' => $config->get('ignored_nodes') ?? []
-    ];
-
-    $form['node_403'] = [
-      '#type' => 'entity_autocomplete',
-      '#title' => $this->t('Default 403 (access denied) page'),
-      '#description' => $this->t('Default 403 (access denied) page'),
-      '#target_type' => 'node'
-    ];
-    if (!empty($config->get('node_403'))) {
-      $entity = \Drupal::entityTypeManager()
-        ->getStorage('node')
-        ->load($config->get('node_403'));
-      $form['node_403']['#default_value'] = $entity;
-    }
-
-    $form['node_404'] = [
-      '#type' => 'entity_autocomplete',
-      '#title' => $this->t('Default 404 (not found) page'),
-      '#description' => $this->t('Default 404 (not found) page'),
-      '#target_type' => 'node'
-    ];
-    if (!empty($config->get('node_404'))) {
-      $entity = \Drupal::entityTypeManager()
-        ->getStorage('node')
-        ->load($config->get('node_404'));
-      $form['node_404']['#default_value'] = $entity;
-    }
+      '#default_value' => $bundles['node'] ?? []
+    );
 
     return parent::buildform($form, $form_state);
   }
 
   public function submitForm(array &$form, FormStateInterface $form_state) {
     $config = $this->config('content_hierarchy.hierarchy_settings');
-    $values = $form_state->cleanValues()->getValues();
-    $ignored_nodes = [];
-    if (isset($values['settings']['ignored_nodes'])) {
+    $bundles = ['node' => []];
+    foreach ($form_state->getValue(['entity_bundles', 'node'], []) as $bundle) {
+      if (!empty($bundle)) {
+        $bundles['node'][] = $bundle;
+      }
+    }
+    $config->set('entity_bundles', $bundles);
+    $config->save();
 
-      foreach ($values['settings']['ignored_nodes'] as $key => $value) {
-        if ($value !== 0) {
-          $ignored_nodes[$key] = $value;
-        }
+    foreach ($bundles as $entity_type => $entity_bundles) {
+      $existing_bundles = [];
+      foreach(NodeType::loadMultiple() as $bundle => $node_type) {
+        $existing_bundles[] = $bundle;
       }
 
-      $config->set('ignored_nodes', $ignored_nodes);
+      if (empty($entity_bundles)) {
+        foreach ($existing_bundles as $bundle) {
+          $field = FieldConfig::loadByName($entity_type, $bundle, 'content_hierarchy');
+          if (!empty($field)) {
+            $field->delete();
+          }
+        }
+
+        $fieldStorage = FieldStorageConfig::loadByName($entity_type, 'content_hierarchy');
+        if (!empty($fieldStorage)) {
+          $fieldStorage->delete();
+        }
+      } else {
+        $this->addFieldStorage($entity_type);
+
+        foreach ($existing_bundles as $bundle) {
+          if (in_array($bundle, $entity_bundles)) {
+            $this->addParentField($entity_type, $bundle);
+          } else {
+            $field = FieldConfig::loadByName($entity_type, $bundle, 'content_hierarchy');
+            if (!empty($field)) {
+              $field->delete();
+            }
+          }
+        }
+
+      }
     }
-    $config->set('node_403', $values['node_403']);
-    $config->set('node_404', $values['node_404']);
-    $config->save();
+
     parent::submitForm($form, $form_state);
+  }
+
+  function addFieldStorage($entity_type) {
+    $fieldStorage = FieldStorageConfig::loadByName($entity_type, 'content_hierarchy');
+    if (empty($fieldStorage)) {
+      $fieldStorage = FieldStorageConfig::create([
+        'field_name' => 'content_hierarchy',
+        'langcode' => \Drupal::languageManager()->getDefaultLanguage()->getId(),
+        'entity_type' => $entity_type,
+        'type' => 'content_hierarchy',
+        'settings' => [],
+        'module' => 'content_hierarchy',
+        'locked' => TRUE,
+        'cardinality' => 1,
+        'translatable' => TRUE,
+        'persist_with_no_fields' => TRUE,
+        'custom_storage' => FALSE,
+      ]);
+      $fieldStorage->save();
+    }
+    return $fieldStorage;
+  }
+
+  function addParentField($entity_type, $bundle) {
+    $entityTypemanager = \Drupal::entityTypeManager();
+
+    // Add or remove the body field, as needed.
+    $field_storage = $this->addFieldStorage($entity_type);
+
+    $field = FieldConfig::loadByName($entity_type, $bundle, 'content_hierarchy');
+    if (empty($field)) {
+      $field = FieldConfig::create([
+        'field_storage' => $field_storage,
+        'field_name' => 'content_hierarchy',
+        'langcode' => \Drupal::languageManager()->getDefaultLanguage()->getId(),
+        'entity_type' => $entity_type,
+        'bundle' => $bundle,
+        'translatable' => TRUE,
+        'label' => $this->t('Content Hierarchy', [], ['langcode' => \Drupal::languageManager()->getDefaultLanguage()->getId()])
+      ]);
+      $field->save();
+
+      // Assign widget settings for the 'default' form mode.
+      $displayForm = $entityTypemanager
+        ->getStorage('entity_form_display')
+        ->load($entity_type . '.' . $bundle . '.default')
+        ->setComponent('content_hierarchy', [
+          'type' => 'content_hierarchy_select'
+        ]);
+      $displayForm->save();
+      unset($displayForm);
+
+      // Assign display settings for the 'default' and 'teaser' view modes.
+      $displayDefault = $entityTypemanager
+        ->getStorage('entity_view_display')
+        ->load($entity_type . '.' . $bundle . '.default')
+        ->removeComponent('content_hierarchy');
+      $displayDefault->save();
+      unset($displayDefault);
+
+      // The teaser view mode is created by the Standard profile and therefore
+      // might not exist.
+      $viewModes = \Drupal::service('entity_display.repository')
+        ->getViewModes($entity_type);
+      if (isset($viewModes['teaser'])) {
+        $displayTeaser = $entityTypemanager
+          ->getStorage('entity_view_display')
+          ->load($entity_type . '.' . $bundle . '.teaser');
+        if (!empty($displayTeaser)) {
+          $displayTeaser->removeComponent('content_hierarchy');
+          $displayTeaser->save();
+        }
+        unset($displayTeaser);
+      }
+    }
   }
 
 }

@@ -1,273 +1,389 @@
 <?php
-
 namespace Drupal\content_hierarchy;
 
-use Drupal\Core\Config\ConfigFactoryInterface;
+use Drupal\Core\Cache\Cache;
+use Drupal\Core\Cache\CacheBackendInterface;
 use Drupal\Core\Database\Connection;
-use Drupal\Core\Entity\EntityTypeManagerInterface;
+use Drupal\Core\Entity\EntityInterface;
+use Drupal\Core\Entity\FieldableEntityInterface;
 use Drupal\Core\Language\LanguageInterface;
-use Drupal\Core\Language\LanguageManagerInterface;
-use Drupal\Core\Link;
-use Drupal\Core\StringTranslation\StringTranslationTrait;
-use Drupal\Core\Url;
-use Drupal\node\Entity\Node;
-use Symfony\Component\HttpFoundation\RequestStack;
+use PDO;
 
-/**
- * Class ContentHierarchyData.
- *
- * @package Drupal\content_hierarchy
- */
 class ContentHierarchyData {
-
-  use StringTranslationTrait;
+  protected $database;
 
   /**
-   * The database connection.
+   * Content Hierarchy cache bin
    *
-   * @var \Drupal\Core\Database\Connection
+   * @var CacheBackendInterface
    */
-  private $database;
+  protected $cache;
 
-  /**
-   * The current request object.
-   *
-   * @var \Symfony\Component\HttpFoundation\Request|null
-   */
-  private $request;
-
-  /**
-   * The config object.
-   *
-   * @var \Drupal\Core\Config\ImmutableConfig
-   */
-  private $config;
-
-  /**
-   * The language manager.
-   *
-   * @var \Drupal\Core\Language\LanguageManagerInterface
-   */
-  private $languageManager;
-
-  /**
-   * @var \Drupal\Core\Entity\EntityTypeManagerInterface
-   */
-  private $entityTypeManager;
-
-  /**
-   * ContentOverviewController constructor.
-   *
-   * @param \Drupal\Core\Database\Connection $database
-   * @param \Symfony\Component\HttpFoundation\RequestStack $requestStack
-   * @param \Drupal\Core\Config\ConfigFactoryInterface $configFactory
-   * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entityTypeManager
-   * @param \Drupal\Core\Language\LanguageManagerInterface $languageManager
-   */
-  public function __construct(Connection $database, RequestStack $requestStack, ConfigFactoryInterface $configFactory, EntityTypeManagerInterface $entityTypeManager, LanguageManagerInterface $languageManager) {
+  public function __construct(Connection $database, CacheBackendInterface $cache) {
     $this->database = $database;
-    $this->request = $requestStack->getCurrentRequest();
-    $this->config = $configFactory->get('content_hierarchy.hierarchy_settings');
-    $this->languageManager = $languageManager;
-    $this->entityTypeManager = $entityTypeManager;
+    $this->cache = $cache;
   }
 
   /**
-   * Get the hierarchical content data.
-   *
-   * @param int $parent_id
-   *   The parent id from where to get he children.
+   * @param string|null $langcode
    *
    * @return array
-   *   The raw data from the database.
    */
-  protected function getContentHierarchicalData(int $parent_id): array {
-    // Check if the field_parent table is created on nodes yet.
-    if (!$this->database->schema()->tableExists('node__field_parent')) {
-      \Drupal::logger('content_hierarchy')->notice('Table node__field_parent was not found, while trying to create the content hierarchy.');
-      \Drupal::messenger()->addWarning('You need to add an Entity hierarchy field, "field_parent" to the nodes which should use content hierarchy. ');
-      return [];
-    }
+  public function getLanguageList($langcode = NULL, $allow_excluded = FALSE) {
+    $lists = &drupal_static(__FUNCTION__, []);
 
-    $subquery = $this->database->select('node__field_parent', 'x');
-    $subquery->fields('x', ['field_parent_target_id', 'entity_id']);
-
-    $query = $this->database->select('node_field_data', 'n');
-    $query->leftJoin('node__field_parent', 'p', 'n.nid = p.entity_id');
-    $query->leftJoin($subquery, 'p2', 'p2.field_parent_target_id = n.nid');
-
-    // If a parent id is provided only get the node children.
-    if ($parent_id > 0) {
-      $query->condition('p.field_parent_target_id', $parent_id);
-    }
-    else {
-      $query->isNull('p.field_parent_target_id');
-    }
-
-    // If any nodes is defined as ignored – ignore them.
-    if (!empty($this->config->get('ignored_nodes'))) {
-      $ignored_nodes = array_keys($this->config->get('ignored_nodes'));
-      $query->condition('n.type', $ignored_nodes, 'NOT IN');
-    }
-
-    $query->orderBy('p.field_parent_weight');
-    $query->orderBy('n.nid');
-    $query->fields(
-      'n', [
-        'nid',
-        'title',
-        'type',
-        'uid',
-        'created',
-        'changed',
-        'status',
-      ]
-    );
-    $query->fields('p2', ['entity_id']);
-    $query->addTag('content_hierarchy_content_list');
-
-    // Filter the nodes by language.
-    $langcode = $this->getFilterParameters('langcode');
-    if ($langcode !== NULL) {
-      $query->condition('n.langcode', $this->convertLangcode($langcode));
-    }
-
-    return $query->execute()->fetchAllAssoc('nid');
-  }
-
-  /**
-   * Get the content list items.
-   *
-   * @param int $parent_id
-   *   The parent id.
-   * @param string $sign
-   *   The open/close sign.
-   *
-   * @return array
-   *   Array og content hierarchical items.
-   *
-   * @throws \Drupal\Core\Entity\EntityMalformedException
-   */
-  public function getContentListItems(int $parent_id, string $sign = '( + )') {
-
-    $result = $this->getContentHierarchicalData($parent_id);
-
-    $nids = [];
-    foreach ($result as $page) {
-      $nids[] = $page->nid;
-    }
-
-    $nodes = Node::loadMultiple($nids);
-    $langcode = \Drupal::languageManager()->getCurrentLanguage()->getId();
-
-    $items = [];
-    /** @var \Drupal\Core\Entity\EntityListBuilderInterface $list_builder */
-    $list_builder = $this->entityTypeManager->getListBuilder('node');
-
-    foreach ($result as $page) {
-      $node = $nodes[$page->nid];
-      if ($node->hasTranslation($langcode)) {
-        $node = $node->getTranslation($langcode);
+    $cid = 'list:' . $langcode;
+    if (empty($lists[$cid])) {
+      if ($cache = $this->cache->get($cid)) {
+        $lists[$cid] = $cache->data;
       }
-      $nid = $page->nid;
-      $expand = NULL;
+      else {
+        $langcode = $this->correctLangCode($langcode);
+        $query = $this->database->select('content_hierarchy', 'ch')
+          ->fields('ch');
+        $alias = $query->innerJoin('content_hierarchy_placement', 'chp', "ch.content_id = %alias.content_id AND %alias.langcode = '" . $langcode . "'");
+        $lists[$cid] = $query
+          ->fields($alias)
+          ->orderBy($alias . '.weight', 'ASC')
+          ->execute()
+          ->fetchAllAssoc('content_id', PDO::FETCH_ASSOC);
 
-      if ($page->entity_id > 0) {
-        $url = Url::fromRoute('content_hierarchy.ajax', ['parent_id' => $nid]);
-        $expand = Link::fromTextAndUrl($sign, $url)->toRenderable();
-        $expand['#attributes']['class'][] = 'use-ajax';
+        $this->cache->set($cid, $lists[$cid], Cache::PERMANENT, ['content_hierarchy_list:' . $langcode]);
       }
-
-      $operations = $list_builder->getOperations($node);
-      if (isset($operations['clone']) && $node->bundle() == 'special_page') {
-        unset($operations['clone']);
-      }
-
-      $actions = [
-        '#type' => 'dropbutton',
-        '#links' => $operations,
-      ];
-
-      $items[] = [
-        'title' => Link::fromTextAndUrl($node->label(), $node->toUrl())->toRenderable(),
-        'content_type' => ContentHierarchyUtils::getNodeType($page->type),
-        'author' => isset($page->uid) ? ContentHierarchyUtils::getAuthorLink($page->uid) : NULL,
-        'status' => ((boolean) $page->status) ? $this->t('Published') : $this->t('Unpublished'),
-        'created' => $page->created,
-        'changed' => $page->changed,
-        'actions' => $actions,
-        'id' => $nid,
-        'expand' => $expand,
-        'children' => [],
-      ];
     }
+    $items = $lists[$cid];
 
-    // Ensure that this query can easily be altered by other modules.
-    /** @var \Drupal\Core\Extension\ModuleHandlerInterface $module_handler */
-    \Drupal::service('module_handler')->alter(
-      'content_hierarchy_content_list',
-      $items
-    );
+    if (!$allow_excluded) {
+      foreach ($items as $content_id => $item) {
+        if ($item['excluded'] == 1) {
+          unset($items[$content_id]);
+        }
+      }
+    }
 
     return $items;
   }
 
   /**
-   * Get filters from url.
+   * @param string|null $langcode
    *
-   * @param string $name
-   *   The name of parameter to get.
-   *
-   * @return mixed|null
-   *   The parameter value if exists otherwise return NULL.
+   * @return array
    */
-  public function getFilterParameters($name) {
-    $parameter = $this->request->get($name);
-    if (!empty($parameter)) {
-      return $parameter;
+  public function getLanguageTree($langcode = null, $allow_excluded = FALSE) {
+    $trees = &drupal_static(__FUNCTION__, []);
+
+    $cid = 'tree:' . $langcode . ':' . intval($allow_excluded);
+    if (empty($trees[$cid])) {
+      if ($cache = $this->cache->get($cid)) {
+        $trees[$cid] = $cache->data;
+      }
+      else {
+        $items = $this->getLanguageList($langcode, $allow_excluded);
+        $parents = [];
+        foreach ($items as $content_id => $item) {
+          $items[$content_id]['children'] = [];
+          $items[$content_id]['depth'] = 0;
+          $parents[$item['parent_id']] = $item['parent_id'];
+        }
+
+        while(count($parents) > 1) {
+          foreach ($items as $content_id => $item) {
+            if (!in_array($content_id, $parents) && $item['parent_id'] > 0) {
+              $items[$item['parent_id']]['children'][$content_id] = $item;
+              $this->increaseDepthInTree($items[$item['parent_id']]['children'][$content_id]);
+              unset($items[$content_id]);
+            }
+          }
+          $parents = [];
+          foreach ($items as $item) {
+            $parents[$item['parent_id']] = $item['parent_id'];
+          }
+        }
+        $trees[$cid] = $items;
+        $this->cache->set($cid, $trees[$cid], Cache::PERMANENT, ['content_hierarchy_list:' . $langcode]);
+      }
     }
 
-    return NULL;
+    return $trees[$cid];
   }
 
   /**
-   * Returns the converted language code.
-   *
-   * @param string $langcode
-   *   The entity type.
-   *
-   * @return string
-   *   The language code.
+   * @param array $item
    */
-  private function convertLangcode($langcode): string {
-    $language_interface = $this->languageManager->getCurrentLanguage();
-    switch ($langcode) {
-      case LanguageInterface::LANGCODE_SITE_DEFAULT:
-        $langcode = $this->languageManager->getDefaultLanguage()->getId();
-        break;
+  protected function increaseDepthInTree(array &$item) {
+    $item['depth']++;
+    if (!empty($item['children'])) {
+      foreach ($item['children'] as $key => $child) {
+        $this->increaseDepthInTree($item['children'][$key]);
+      }
+    }
+  }
 
-      case 'current_interface':
-        $langcode = $language_interface->getId();
-        break;
+  /**
+   * @param EntityInterface $entity
+   *
+   * @return int|null
+   */
+  public function findEntity(EntityInterface $entity) {
+    return $this->findContentID('entity', $entity->getEntityTypeId(), $entity->id());
+  }
 
-      case 'authors_default':
-        $user = \Drupal::currentUser();
-        $language_code = $user->getPreferredLangcode();
-        if (!empty($language_code)) {
-          $langcode = $language_code;
+  /**
+   * @param string $source
+   * @param string $type
+   * @param string|int|null $entity_id
+   *
+   * @return int|null
+   */
+  public function findContentID($source, $type, $entity_id = NULL) {
+    if (is_null($entity_id)) {
+      return NULL;
+    } else {
+      $query = $this->database->select('content_hierarchy', 'ch')
+        ->fields('ch', ['content_id'])
+        ->condition('source', $source)
+        ->condition('type', $type);
+      if (!empty($entity_id)) {
+        $query->condition('entity_id', $entity_id);
+      }
+      $result = $query->execute()->fetchField();
+      if (empty($result)) {
+        return NULL;
+      } else {
+        return $result;
+      }
+    }
+  }
+
+  /**
+   * @param int $content_id
+   *
+   * @return array
+   */
+  public function getContent($content_id) {
+    return $this->database->select('content_hierarchy', 'ch')
+      ->condition('content_id', $content_id)
+      ->fields('ch')
+      ->execute()
+      ->fetchAssoc();
+  }
+
+  /**
+   * @param int $content_id
+   *
+   * @return array
+   */
+  public function getContentAndPlacement($content_id, $langcode = NULL) {
+    $langcode = $this->correctLangCode($langcode);
+    $content = $this->getContent($content_id);
+    $content += $this->database->select('content_hierarchy_placement', 'chp')
+      ->condition('content_id', $content_id)
+      ->condition('langcode', $langcode)
+      ->fields('chp')
+      ->execute()
+      ->fetchAssoc();
+    return $content;
+  }
+  /**
+   * @param \Drupal\Core\Entity\FieldableEntityInterface $entity
+   * @param int $placement
+   * @param int|null $weight
+   */
+  public function setEntityPlacement(FieldableEntityInterface $entity, $placement, $weight = NULL) {
+    $content_id = $this->findEntity($entity);
+    if (empty($content_id)) {
+      $content_id = $this->addContent('entity', $entity->getEntityTypeId(), $entity->id());
+    }
+    $this->setContentPlacement($content_id, $entity->language()->getId(), $placement, $weight);
+  }
+
+  /**
+   * @param int $parent_id
+   * @param string $source
+   * @param string $type
+   * @param string|int|null $entity_id
+   * @param string $langcode
+   *
+   * @return int
+   */
+  public function addContent($source, $type, $entity_id) {
+    $values = [
+      'source' => $source,
+      'type' => $type,
+      'entity_id' => $entity_id
+    ];
+    $content_id = $this->database->insert('content_hierarchy')
+      ->fields($values)
+      ->execute();
+
+    return $content_id;
+  }
+
+  public function deleteContent($content_id) {
+    $this->database->delete('content_hierarchy')
+      ->condition('content_id', $content_id)
+      ->execute();
+    $this->database->delete('content_hierarchy_placement')
+      ->condition('content_id', $content_id)
+      ->execute();
+  }
+
+  /**
+   * @param int $content_id
+   * @param string|null $langcode
+   *
+   * @return int|null
+   */
+  public function getContentPlacement($content_id, $langcode = NULL) {
+    $langcode = $this->correctLangCode($langcode);
+    $result = $this->database->select('content_hierarchy_placement', 'chp')
+      ->condition('content_id', $content_id)
+      ->condition('langcode', $langcode)
+      ->fields('chp')
+      ->execute()
+      ->fetchAssoc();
+
+    if (empty($result)) {
+      return NULL;
+    } else {
+      $placement = intval($result['parent_id']);
+      if ($result['excluded'] == 1) {
+        $placement = -1;
+      }
+    }
+    return $placement;
+  }
+
+  /**
+   * @param int $content_id
+   * @param string $langcode
+   * @param int $placement
+   * @param int|null $weight
+   */
+  public function setContentPlacement($content_id, $langcode, $placement, $weight = NULL) {
+    $langcode = $this->correctLangCode($langcode);
+    $values = $this->placementToValues($placement);
+
+    $current = $this->getContentPlacement($content_id, $langcode);
+
+    if (is_null($current)) {
+      $values['content_id'] = $content_id;
+      $values['langcode'] = $langcode;
+      $this->database->insert('content_hierarchy_placement')
+        ->fields($values)
+        ->execute();
+    } else {
+      $this->database->update('content_hierarchy_placement')
+        ->fields($values)
+        ->condition('content_id', $content_id)
+        ->condition('langcode', $langcode)
+        ->execute();
+    }
+    if (!is_null($weight)) {
+      $this->database->update('content_hierarchy_placement')
+        ->fields(['weight' => $weight])
+        ->condition('content_id', $content_id)
+        ->condition('langcode', $langcode)
+        ->execute();
+    }
+  }
+
+  public function getAncestorsOf($content_id, $langcode = NULL, &$ancestors = []) {
+    $placement = $this->getContentPlacement($content_id, $langcode);
+    if ($placement > 0) {
+      $ancestors[] = $placement;
+      $this->getAncestorsOf($placement, $langcode, $ancestors);
+    }
+    return array_reverse($ancestors);
+  }
+
+  /**
+   * @param $content_id
+   * @param string|null $langcode
+   * @param bool $recursive
+   *
+   * @return array
+   */
+  public function getChildrenOf($content_id, $langcode = NULL, $recursive = TRUE) {
+    $langcode = $this->correctLangCode($langcode);
+    $tree = $this->getLanguageTree($langcode);
+    $ancestors = $this->getAncestorsOf($content_id, $langcode);
+    $children = [];
+    foreach ($ancestors as $contentID) {
+      $tree = $tree[$contentID]['children'];
+    }
+    if (isset($tree[$content_id])) {
+      $content = $tree[$content_id];
+      foreach ($content['children'] as $child) {
+        $children[] = $child['content_id'];
+        if ($recursive && !empty($child['children'])) {
+          $this->getMoreChildrenOf($child['children'], $children);
         }
-        else {
-          $langcode = $language_interface->getId();
-        }
+      }
+    }
+    return $children;
+  }
+
+  /**
+   * @param array $items
+   *
+   * @return array
+   */
+  protected function getMoreChildrenOf(array $items, &$children) {
+    foreach ($items as $item) {
+      $children[] = $item['content_id'];
+      if (!empty($item['children'])) {
+        $this->getMoreChildrenOf($item['children'], $children);
+      }
+    }
+  }
+
+  /**
+   * @return array
+   */
+  public function getAllContentIDs() {
+    return $this->database->select('content_hierarchy', 'ch')
+      ->fields('ch', ['content_id'])
+      ->execute()
+      ->fetchCol();
+  }
+
+  /**
+   * @param string|null $langcode
+   *
+   * @return mixed|string
+   */
+  function correctLangCode($langcode) {
+    if (is_null($langcode)) {
+      $langcode = \Drupal::languageManager()->getCurrentLanguage(LanguageInterface::TYPE_CONTENT)->getId();
+    }
+    return $langcode;
+  }
+
+  /**
+   * @param int $placement
+   *
+   * @return array
+   */
+  function placementToValues($placement) {
+    $values = [
+      'parent_id' => $placement,
+      'root' => 0,
+      'excluded' => 0,
+      'weight' => 0
+    ];
+    switch ($placement) {
+      case 0:
+        $values['root'] = 1;
+        $values['weight'] = -1000;
+        break;
+      case -1:
+        $values['parent_id'] = 0;
+        $values['excluded'] = 1;
+        $values['weight'] = 1000;
         break;
     }
-    if ($langcode) {
-      return $langcode;
-    }
-
-    // If we still do not have a default value, just return the value stored in
-    // the configuration; it has to be an actual language code.
-    return $language_interface->getDefaultLangcode();
+    return $values;
   }
 
 }
