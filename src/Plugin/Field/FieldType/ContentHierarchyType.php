@@ -50,7 +50,7 @@ class ContentHierarchyType extends FieldItemBase {
   /**
    * {@inheritdoc}
    */
-  public function preSave() {
+  public function postSave($update) {
     if (($this->values['new_parent'] ?? '') !== '') {
       $this->data->setEntityPlacement($this->getEntity(), intval($this->values['new_parent']));
       $content = $this->storage->loadFromEntity($this->getEntity());
