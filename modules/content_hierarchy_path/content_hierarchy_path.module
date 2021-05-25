@@ -74,7 +74,6 @@ function content_hierarchy_path_tokens($type, $tokens, array $data, array $optio
           }
 
           $ancestors = $storage->findAncestors($content);
-          $ancestors[$content->id()] = $content;
           $items = [];
           foreach ($ancestors as $content_ancestor) {
             if ($content_ancestor->isExcluded() || $content_ancestor->isRoot()) {
