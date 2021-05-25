@@ -53,7 +53,10 @@ class ContentHierarchyType extends FieldItemBase {
   public function preSave() {
     if (($this->values['new_parent'] ?? '') !== '') {
       $this->data->setEntityPlacement($this->getEntity(), intval($this->values['new_parent']));
-      Cache::invalidateTags($this->storage->getContentCacheTags([$this->storage->loadFromEntity($this->getEntity())]));
+      $content = $this->storage->loadFromEntity($this->getEntity());
+      if (!empty($content)) {
+        Cache::invalidateTags($this->storage->getContentCacheTags([$content]));
+      }
     }
   }
 

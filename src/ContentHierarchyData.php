@@ -195,6 +195,9 @@ class ContentHierarchyData {
    * @param int|null $weight
    */
   public function setEntityPlacement(FieldableEntityInterface $entity, $placement, $weight = NULL) {
+    if (empty($entity->id())) {
+      return;
+    }
     $content_id = $this->findEntity($entity);
     if (empty($content_id)) {
       $content_id = $this->addContent('entity', $entity->getEntityTypeId(), $entity->id());
