@@ -221,6 +221,9 @@ class ContentHierarchyStorage {
             $contents[$cid]['url'] = NULL;
           }
           $contents[$cid]['operations'] = $this->entityTypeManager->getListBuilder($content['type'])->getOperations($entity);
+          foreach ($contents[$cid]['operations'] as $key => $operation) {
+            $contents[$cid]['operations'][$key]['url']->setOption('query', []);
+          }
         }
         $this->cache->set($cid, $contents[$cid], $cacheMetadata->getCacheMaxAge(), $cacheMetadata->getCacheTags());
       }
