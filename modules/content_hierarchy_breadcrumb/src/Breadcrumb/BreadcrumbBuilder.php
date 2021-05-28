@@ -68,6 +68,7 @@ class BreadcrumbBuilder implements BreadcrumbBuilderInterface {
 
   public function build(RouteMatchInterface $route_match) {
     $breadcrumb = new Breadcrumb();
+    $breadcrumb->addCacheContexts(['route']);
     /** @var \Drupal\Core\Entity\ContentEntityInterface $route_entity */
     $route_entity = $this->getEntityFromRouteMatch($route_match);
     if ($route_entity && $this->contentHierarchyStorage->isEntityInHierarchy($route_entity)) {
