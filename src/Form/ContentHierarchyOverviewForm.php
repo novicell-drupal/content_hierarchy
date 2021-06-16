@@ -452,7 +452,7 @@ class ContentHierarchyOverviewForm extends FormBase {
    * @inheritDoc
    */
   public function submitForm(array &$form, FormStateInterface $form_state) {
-    $langcode = $form_state->cleanValues()->getValues()['tree_langcode'];
+    $langcode = $form_state->cleanValues()->getValues()['tree_langcode'] ?? $this->getLanguageManager()->getDefaultLanguage()->getId();
     $items = $form_state->getValue('content');
     // Sort term order based on weight.
     uasort($items, ['Drupal\Component\Utility\SortArray', 'sortByWeightElement']);
