@@ -52,8 +52,26 @@ class ContentHierarchySettingsForm extends ConfigFormBase {
       '#suffix' => '</div>',
     ];
 
-    $bundles = $config->get('entity_bundles') ?? [];
+    $options = [
+      'draggable' => $this->t('Draggable'),
+      'foldable' => $this->t('Foldable')
+    ];
+    $form['overview_type'] = [
+      '#type' => 'select',
+      '#title' => $this->t('Overview type'),
+      '#description' => $this->t('What type of overview should be used for content hierarchy?'),
+      '#options' => $options,
+      '#default_value' => $config->get('overview_type') ?? 'draggable'
+    ];
 
+    $form['multilingual'] = [
+      '#type' => 'checkbox',
+      '#title' => $this->t('Translatable'),
+      '#description' => $this->t('Have different content trees for each language.'),
+      '#default_value' => $config->get('multilingual') ?? TRUE
+    ];
+
+    $bundles = $config->get('entity_bundles') ?? [];
     $options = [];
     foreach(NodeType::loadMultiple() as $id => $node_type) {
       $options[$id] = $node_type->label();
@@ -72,6 +90,10 @@ class ContentHierarchySettingsForm extends ConfigFormBase {
 
   public function submitForm(array &$form, FormStateInterface $form_state) {
     $config = $this->config('content_hierarchy.hierarchy_settings');
+
+    $config->set('multilingual', $form_state->getValue('multilingual') == 1);
+    $config->set('overview_type', $form_state->getValue('overview_type'));
+
     $bundles = ['node' => []];
     foreach ($form_state->getValue(['entity_bundles', 'node'], []) as $bundle) {
       if (!empty($bundle)) {
@@ -79,6 +101,7 @@ class ContentHierarchySettingsForm extends ConfigFormBase {
       }
     }
     $config->set('entity_bundles', $bundles);
+
     $config->save();
 
     foreach ($bundles as $entity_type => $entity_bundles) {
@@ -89,10 +112,7 @@ class ContentHierarchySettingsForm extends ConfigFormBase {
 
       if (empty($entity_bundles)) {
         foreach ($existing_bundles as $bundle) {
-          $field = FieldConfig::loadByName($entity_type, $bundle, 'content_hierarchy');
-          if (!empty($field)) {
-            $field->delete();
-          }
+          $this->removeEntityBundle($entity_type, $bundle);
         }
 
         $fieldStorage = FieldStorageConfig::loadByName($entity_type, 'content_hierarchy');
@@ -106,10 +126,7 @@ class ContentHierarchySettingsForm extends ConfigFormBase {
           if (in_array($bundle, $entity_bundles)) {
             $this->addParentField($entity_type, $bundle);
           } else {
-            $field = FieldConfig::loadByName($entity_type, $bundle, 'content_hierarchy');
-            if (!empty($field)) {
-              $field->delete();
-            }
+            $this->removeEntityBundle($entity_type, $bundle);
           }
         }
 
@@ -117,6 +134,20 @@ class ContentHierarchySettingsForm extends ConfigFormBase {
     }
 
     parent::submitForm($form, $form_state);
+  }
+
+  function removeEntityBundle($entity_type, $bundle) {
+    $field = FieldConfig::loadByName($entity_type, $bundle, 'content_hierarchy');
+    if (!empty($field)) {
+      $field->delete();
+    }
+    $entity_ids = \Drupal::entityQuery($entity_type)
+      ->condition('type', $bundle)
+      ->execute();
+    /** @var \Drupal\content_hierarchy\ContentHierarchyData $contentHierarchyData */
+    $contentHierarchyData = \Drupal::service('content_hierarchy.data');
+    $content_ids = $contentHierarchyData->findEntityIds($entity_type, $entity_ids);
+    $contentHierarchyData->deleteMultiple($content_ids);
   }
 
   function addFieldStorage($entity_type) {

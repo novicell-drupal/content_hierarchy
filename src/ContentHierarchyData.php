@@ -108,6 +108,79 @@ class ContentHierarchyData {
   }
 
   /**
+   * @param string|null $langcode
+   *
+   * @return array
+   */
+  public function getLanguageListWithDepth($langcode = NULL, $open_items = []) {
+    $langcode = $this->correctLangCode($langcode);
+    $parents = $this->database->select('content_hierarchy_placement', 'chp')
+      ->fields('chp', ['content_id'])
+      ->condition('langcode', $langcode)
+      ->condition('parent_id', array_keys($open_items), 'IN')
+      ->condition('excluded', 0)
+      ->execute()
+      ->fetchCol();
+    $parents[] = 0;
+
+    $query = $this->database->select('content_hierarchy', 'ch')
+      ->fields('ch');
+    $alias = $query->innerJoin('content_hierarchy_placement', 'chp', "ch.content_id = %alias.content_id AND %alias.langcode = '" . $langcode . "'");
+    $items = $query
+      ->fields($alias)
+      ->condition($alias . '.parent_id', $parents, 'IN')
+      ->condition($alias . '.excluded', 0)
+      ->orderBy($alias . '.weight', 'ASC')
+      ->orderBy($alias . '.content_id', 'ASC')
+      ->execute()
+      ->fetchAllAssoc('content_id', PDO::FETCH_ASSOC);
+
+    $roots = [];
+    foreach ($items as $key => $item) {
+      $parent = $item['parent_id'];
+      if ($parent == 0) {
+        $roots[] = $key;
+      } else {
+        if (empty($items[$parent]['children'])) {
+          $items[$parent]['children'] = [];
+        }
+        $items[$parent]['children'][] = $key;
+      }
+    }
+    $content = [];
+    foreach ($roots as $root) {
+      $items[$root]['depth'] = 0;
+      $content[] = $items[$root];
+      if (!empty($items[$root]['children'])) {
+        foreach ($items[$root]['children'] as $child_id) {
+          $items[$child_id]['depth'] = 1;
+          $content[] = $items[$child_id];
+          if (!empty($items[$child_id]['children'])) {
+            $this->addLanguageListWithDepth($content, $items, $items[$child_id]['children']);
+          }
+        }
+      }
+    }
+    return $content;
+  }
+
+  /**
+   * @param string|null $langcode
+   *
+   * @return array
+   */
+  protected function addLanguageListWithDepth(&$content, $items, $children, $depth = 2) {
+    foreach ($children as $child_id) {
+      $item = $items[$child_id];
+      $item['depth'] = $depth;
+      $content[] = $item;
+      if (!empty($items[$child_id]['children'])) {
+        $this->addLanguageListWithDepth($content, $items, $items[$child_id]['children'], $depth + 1);
+      }
+    }
+  }
+
+    /**
    * @param array $item
    */
   protected function increaseDepthInTree(array &$item) {
@@ -153,6 +226,21 @@ class ContentHierarchyData {
         return $result;
       }
     }
+  }
+
+  /**
+   * @param string $entity_type
+   * @param array $entity_ids
+   *
+   * @return array
+   */
+  public function findEntityIds($entity_type, array $entity_ids) {
+    $query = $this->database->select('content_hierarchy', 'ch')
+      ->fields('ch', ['content_id'])
+      ->condition('source', 'entity')
+      ->condition('type', $entity_type)
+      ->condition('entity_id', $entity_ids, 'IN');
+    return $query->execute()->fetchCol();
   }
 
   /**
@@ -227,12 +315,27 @@ class ContentHierarchyData {
     return $content_id;
   }
 
+  /**
+   * @param int $content_id
+   */
   public function deleteContent($content_id) {
     $this->database->delete('content_hierarchy')
       ->condition('content_id', $content_id)
       ->execute();
     $this->database->delete('content_hierarchy_placement')
       ->condition('content_id', $content_id)
+      ->execute();
+  }
+
+  /**
+   * @param array $content_ids
+   */
+  public function deleteMultiple(array $content_ids) {
+    $this->database->delete('content_hierarchy')
+      ->condition('content_id', $content_ids, 'IN')
+      ->execute();
+    $this->database->delete('content_hierarchy_placement')
+      ->condition('content_id', $content_ids, 'IN')
       ->execute();
   }
 

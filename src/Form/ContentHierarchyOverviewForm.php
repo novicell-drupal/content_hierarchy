@@ -7,6 +7,7 @@ use Drupal\content_hierarchy\ContentHierarchyStorage;
 use Drupal\Core\Datetime\DateFormatter;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Form\FormBase;
+use Drupal\Core\Form\FormState;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Language\LanguageInterface;
 use Drupal\Core\Language\LanguageManagerInterface;
@@ -34,6 +35,11 @@ class ContentHierarchyOverviewForm extends FormBase {
   private $contentHierarchyStorage;
 
   /**
+   * @var \Drupal\content_hierarchy\ContentHierarchyData
+   */
+  private $contentHierarchyData;
+
+  /**
    * The renderer service.
    *
    * @var \Drupal\Core\Render\RendererInterface
@@ -45,7 +51,7 @@ class ContentHierarchyOverviewForm extends FormBase {
    *
    * @var \Drupal\Core\Datetime\DateFormatter
    */
-  protected $dataFormatter;
+  protected $dateFormatter;
 
   /**
    * ContentOverviewController constructor.
@@ -53,13 +59,13 @@ class ContentHierarchyOverviewForm extends FormBase {
    * @param \Drupal\Core\Language\LanguageManagerInterface $languageManager
    * @param \Drupal\content_hierarchy\ContentHierarchyStorage $contentHierarchyStorage
    * @param \Drupal\Core\Render\RendererInterface $renderer
-   * @param \Drupal\Core\Datetime\DateFormatter $dataFormatter
+   * @param \Drupal\Core\Datetime\DateFormatter $dateFormatter
    */
-  public function __construct(LanguageManagerInterface $languageManager, ContentHierarchyStorage $contentHierarchyStorage, RendererInterface $renderer, DateFormatter $dataFormatter, EntityTypeManagerInterface $entityTypeManager) {
+  public function __construct(LanguageManagerInterface $languageManager, ContentHierarchyStorage $contentHierarchyStorage, RendererInterface $renderer, DateFormatter $dateFormatter, EntityTypeManagerInterface $entityTypeManager) {
     $this->languageManager = $languageManager;
     $this->contentHierarchyStorage = $contentHierarchyStorage;
     $this->renderer = $renderer;
-    $this->dataFormatter = $dataFormatter;
+    $this->dateFormatter = $dateFormatter;
     $this->entityTypeManager = $entityTypeManager;
   }
 
@@ -87,50 +93,206 @@ class ContentHierarchyOverviewForm extends FormBase {
    * Return overview page.
    */
   public function buildForm(array $form, FormStateInterface $form_state) {
-    $form['filter'] = [
-      '#weight' => 0,
-    ];
-    $langcode = $this->languageManager->getCurrentLanguage(LanguageInterface::TYPE_CONTENT)->getId();
-    $request = \Drupal::request();
-    if ($request->query->has('langcode')) {
-      $langcode = $request->query->get('langcode');
+    $config = $this->config('content_hierarchy.hierarchy_settings');
+    $langcode = $this->getLangCode();
+    if ($config->get('multilingual') ?? TRUE) {
+      $languages = $this->getLanguageOptions();
+
+      $form['filter'] = [
+        '#weight' => 0,
+      ];
+      $form['filter']['langcode'] = [
+        '#type' => 'select',
+        '#title' => $this->t('Language'),
+        '#options' => $languages,
+        '#default_value' => $langcode,
+      ];
+
+      $form['filter']['actions'] = [
+        '#type' => 'actions',
+        '#weight' => 0,
+      ];
+
+      $form['filter']['actions']['filter_submit'] = [
+        '#type' => 'submit',
+        '#submit' => ['::submitFilter'],
+        '#value' => $this->t('Filter'),
+      ];
+
+      $form['tree_langcode'] = [
+        '#type' => 'hidden',
+        '#default_value' => $langcode,
+      ];
+
+      $form['content_title'] = [
+        '#prefix' => '<h3>',
+        '#markup' => $this->t('Content hierarchy for @language', ['@language' => $languages[$langcode]]),
+        '#suffix' => '</h3>'
+      ];
+    } else {
+      $form['content_title'] = [
+        '#prefix' => '<h3>',
+        '#markup' => $this->t('Content Hierarchy overview'),
+        '#suffix' => '</h3>'
+      ];
     }
-    $languages = $this->getLanguageOptions();
 
-    $form['filter']['langcode'] = [
-      '#type' => 'select',
-      '#title' => $this->t('Language'),
-      '#options' => $languages,
-      '#default_value' => $langcode,
-    ];
-
-    $form['filter']['actions'] = [
-      '#type' => 'actions',
-      '#weight' => 0,
-    ];
-
-    $form['filter']['actions']['filter_submit'] = [
-      '#type' => 'submit',
-      '#submit' => ['::submitFilter'],
-      '#value' => $this->t('Filter'),
-    ];
-
-    $form['tree_langcode'] = [
-      '#type' => 'hidden',
-      '#default_value' => $langcode,
-    ];
     $form['#cache'] = [
-      'tags' => $this->contentHierarchyStorage->getListCacheTags($langcode)
-    ];
-
-    $form['content_title'] = [
-      '#prefix' => '<h3>',
-      '#markup' => $this->t('Content hierarchy for @language', ['@language' => $languages[$langcode]]),
-      '#suffix' => '</h3>'
+      'tags' => $this->getContentHierarchyStorage()->getListCacheTags($langcode)
     ];
 
     $update_tree_access = TRUE;
     $empty = $this->t('No content available.');
+    if ($config->get('overview_type') == 'foldable') {
+      $this->buildFoldable($form, $form_state, $langcode, $update_tree_access, $empty);
+    } else {
+      $this->buildDraggable($form, $langcode, $update_tree_access, $empty);
+    }
+
+    return $form;
+  }
+
+  protected function buildFoldable(&$form, FormStateInterface $form_state, $langcode, $update_tree_access, $empty) {
+    $maxDepth = 1;
+    $open_items = $form_state->get('open_items');
+    if (is_null($open_items)) {
+      $open_items = ['0' => TRUE];
+      $items = $this->getContentHierarchyData()->getLanguageListWithDepth($langcode, $open_items);
+      foreach ($items as $key => $item) {
+        if ($item['depth'] < $maxDepth) {
+          $open_items[$item['content_id']] = TRUE;
+        }
+      }
+      $form_state->set('open_items', $open_items);
+    }
+    $items = $this->getContentHierarchyData()->getLanguageListWithDepth($langcode, $open_items);
+
+    $form['content'] = [
+      '#type' => 'table',
+      '#empty' => $empty,
+      '#header' => [
+        'content' => $this->t('Name'),
+        'type' => $this->t('Type'),
+        'status' => $this->t('Status'),
+        'created' => $this->t('Created'),
+        'changed' => $this->t('Changed'),
+        'operations' => $this->t('Operations'),
+      ],
+      '#prefix' => '<div id="content-hierarchy-overview">',
+      '#suffix' => '</div>',
+      '#attached' => ['library' => ['content_hierarchy/overview']],
+    ];
+
+    foreach ($items as $key => $item) {
+      if ($item['root'] == 0 && empty($open_items[$item['parent_id']])) {
+        continue;
+      }
+
+      $form['content'][$key] = [
+        'content' => [],
+        'type' => [],
+        'status' => [],
+        'created' => [],
+        'changed' => [],
+        'operations' => []
+      ];
+
+      $this->getContentHierarchyStorage()->populateContent($item);
+      $form['content'][$key]['#content'] = $item;
+
+      if (!is_null($item['depth']) && $item['depth'] > 0) {
+        $form['content'][$key]['content'][] = [
+          '#theme' => 'indentation',
+          '#size' => $item['depth'],
+        ];
+      }
+
+      if (!empty($item['children'])) {
+        $form['content'][$key]['content'][] = [
+          '#type' => 'submit',
+          '#value' => empty($open_items[$item['content_id']]) ? '( + )' : '( - )',
+          '#submit' => ['::toggleItem'],
+          '#name' => 'item-' . $item['content_id'],
+          '#attributes' => [
+            'class' => [
+              'toggle-item-button',
+            ],
+          ],
+          '#ajax' => [
+            'disable-refocus' => TRUE, // Or TRUE to prevent re-focusing on the triggering element.
+            'callback' => '::overviewCallback',
+            'wrapper' => 'content-hierarchy-overview',
+            'progress' => [
+              'type' => 'throbber',
+            ],
+          ],
+        ];
+      }
+
+      $form['content'][$key]['content'][] = [
+        '#type' => 'link',
+        '#title' => $item['title'],
+        '#url' => $item['url'],
+      ];
+
+      $form['content'][$key]['type'] = [
+        '#type' => 'markup',
+        '#markup' => $this->getTypeLabel($item)
+      ];
+
+      if (!is_null($item['status'])) {
+        $form['content'][$key]['status'] = [
+          '#type' => 'markup',
+          '#markup' => $this->t($item['status']),
+        ];
+      }
+
+      if (!is_null($item['created'])) {
+        $form['content'][$key]['created'] = [
+          '#type' => 'markup',
+          '#markup' => $this->getDateFormatter()->format($item['created'], 'short')
+        ];
+      }
+
+      if (!is_null($item['changed'])) {
+        $form['content'][$key]['changed'] = [
+          '#type' => 'markup',
+          '#markup' => $this->getDateFormatter()->format($item['changed'], 'short')
+        ];
+      }
+
+      if ($update_tree_access) {
+        $form['content'][$key]['operations'] = [
+          '#type' => 'operations',
+          '#links' => $item['operations'],
+        ];
+      }
+    }
+  }
+
+  public function toggleItem(array &$form, FormStateInterface $form_state) {
+    $item_id = intval(substr($form_state->getTriggeringElement()['#name'], 5));
+    $open_items = $form_state->get('open_items');
+    if (empty($open_items[$item_id])) {
+      $open_items[$item_id] = TRUE;
+    } else {
+      unset($open_items[$item_id]);
+      /** @var \Drupal\content_hierarchy\ContentHierarchyData $dataService */
+      $dataService = \Drupal::service('content_hierarchy.data');
+      $children = $dataService->getChildrenOf($item_id, $this->getLangCode());
+      foreach ($children as $child) {
+        unset($open_items[$child]);
+      }
+    }
+    $form_state->set('open_items', $open_items);
+    $form_state->setRebuild();
+  }
+
+  public function overviewCallback($form, FormStateInterface $form_state) {
+    return $form['content'];
+  }
+
+  protected function buildDraggable(&$form, $langcode, $update_tree_access, $empty) {
     $form['content'] = [
       '#type' => 'table',
       '#empty' => $empty,
@@ -143,15 +305,12 @@ class ContentHierarchyOverviewForm extends FormBase {
         'operations' => $this->t('Operations'),
         'weight' => $update_tree_access ? $this->t('Weight') : NULL,
       ],
-      '#attributes' => [
-        'id' => 'taxonomy',
-      ],
     ];
 
     $delta = 0;
     $weight = 0;
     $parent_fields = FALSE;
-    $items = $this->contentHierarchyStorage->getListWithDepth($langcode, FALSE);
+    $items = $this->getContentHierarchyStorage()->getListWithDepth($langcode, FALSE);
     foreach ($items as $key => $item) {
       $form['content'][$key] = [
         'content' => [],
@@ -172,7 +331,7 @@ class ContentHierarchyOverviewForm extends FormBase {
         ];
       }
       $form['content'][$key]['content'] = [
-        '#prefix' => !empty($indentation) ? $this->renderer->render($indentation) : '',
+        '#prefix' => !empty($indentation) ? $this->getRenderer()->render($indentation) : '',
         '#type' => 'link',
         '#title' => $item->getTitle(),
         '#url' => $item->getUrl(),
@@ -231,14 +390,14 @@ class ContentHierarchyOverviewForm extends FormBase {
         if (!is_null($item->getCreated())) {
           $form['content'][$key]['created'] = [
             '#type' => 'markup',
-            '#markup' => $this->dataFormatter->format($item->getCreated(), 'short')
+            '#markup' => $this->getDateFormatter()->format($item->getCreated(), 'short')
           ];
         }
 
         if (!is_null($item->getChanged())) {
           $form['content'][$key]['changed'] = [
             '#type' => 'markup',
-            '#markup' => $this->dataFormatter->format($item->getChanged(), 'short')
+            '#markup' => $this->getDateFormatter()->format($item->getChanged(), 'short')
           ];
         }
 
@@ -287,8 +446,6 @@ class ContentHierarchyOverviewForm extends FormBase {
         '#button_type' => 'primary',
       ];
     }
-
-    return $form;
   }
 
   /**
@@ -352,7 +509,7 @@ class ContentHierarchyOverviewForm extends FormBase {
   protected function getLanguageOptions() {
     $language_options = [];
 
-    $languages = $this->languageManager->getLanguages();
+    $languages = $this->getLanguageManager()->getLanguages();
     foreach ($languages as $langcode => $language) {
       $language_options[$langcode] = $language->isLocked() ? t('- @name -', ['@name' => $language->getName()]) : $language->getName();
     }
@@ -361,20 +518,118 @@ class ContentHierarchyOverviewForm extends FormBase {
   }
 
   /**
-   * @param \Drupal\content_hierarchy\ContentHierarchy $content
+   * @param \Drupal\content_hierarchy\ContentHierarchy|array $content
    *
    * @return \Drupal\Core\StringTranslation\TranslatableMarkup|string|null
    * @throws \Drupal\Component\Plugin\Exception\InvalidPluginDefinitionException
    * @throws \Drupal\Component\Plugin\Exception\PluginNotFoundException
    */
-  protected function getTypeLabel(ContentHierarchy $content) {
-    if ($content->getSource() == 'entity') {
-      return $this->entityTypeManager
-        ->getStorage($content->getEntityType() . '_type')
-        ->load($content->getEntityBundle())
-        ->label();
-    } else {
+  protected function getTypeLabel($content) {
+    if (is_array($content)) {
+      if ($content['source'] == 'entity') {
+        return $this->getEntityTypeManager()
+          ->getStorage($content['entity_type'] . '_type')
+          ->load($content['entity_bundle'])
+          ->label();
+      } else {
+        return $this->t($content['type']);
+      }
+    }
+    else {
+      if ($content->getSource() == 'entity') {
+        return $this->getEntityTypeManager()
+          ->getStorage($content->getEntityType() . '_type')
+          ->load($content->getEntityBundle())
+          ->label();
+      }
+    else {
       return $this->t($content->getType());
     }
+  }
+  }
+
+  protected function getLangCode() {
+    $config = $this->config('content_hierarchy.hierarchy_settings');
+    if ($config->get('multilingual') ?? TRUE) {
+      $langcode = $this->getLanguageManager()
+        ->getCurrentLanguage(LanguageInterface::TYPE_CONTENT)
+        ->getId();
+      $request = \Drupal::request();
+      if ($request->query->has('langcode')) {
+        $langcode = $request->query->get('langcode');
+      }
+    } else {
+      $langcode = $this->getLanguageManager()->getDefaultLanguage()->getId();
+    }
+    return $langcode;
+  }
+
+  /**
+   * @return DateFormatter
+   */
+  protected function getDateFormatter() {
+    if (!$this->dateFormatter) {
+      $this->dateFormatter = \Drupal::service('date.formatter');
+    }
+    return $this->dateFormatter;
+  }
+
+  /**
+   * @return RendererInterface
+   */
+  protected function getRenderer() {
+    if (!$this->renderer) {
+      $this->renderer = \Drupal::service('renderer');
+    }
+    return $this->renderer;
+  }
+
+  /**
+   * @return EntityTypeManagerInterface
+   */
+  protected function getEntityTypeManager() {
+    if (!$this->entityTypeManager) {
+      $this->entityTypeManager = \Drupal::service('entity_type.manager');
+    }
+    return $this->entityTypeManager;
+  }
+
+  /**
+   * Gets the content hierarchy storage.
+   *
+   * @return ContentHierarchyStorage
+   *   The content hierarchy storage.
+   */
+  protected function getContentHierarchyStorage() {
+    if (!$this->contentHierarchyStorage) {
+      $this->contentHierarchyStorage = \Drupal::service('content_hierarchy.storage');
+    }
+    return $this->contentHierarchyStorage;
+  }
+
+  /**
+   * Gets the content hierarchy data service.
+   *
+   * @return contentHierarchyData
+   *   The content hierarchy data service.
+   */
+  protected function getContentHierarchyData() {
+    if (!$this->contentHierarchyData) {
+      $this->contentHierarchyData = \Drupal::service('content_hierarchy.data');
+    }
+    return $this->contentHierarchyData;
+  }
+
+  /**
+   * Gets the language manager.
+   *
+   * @return LanguageManagerInterface
+   *   The language manager.
+   */
+  protected function getLanguageManager() {
+    if (!$this->languageManager) {
+      $this->languageManager = \Drupal::service('language_manager');
+    }
+    return $this->languageManager;
   }
 }

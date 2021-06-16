@@ -4,6 +4,7 @@ namespace Drupal\content_hierarchy;
 use Drupal\Core\Cache\Cache;
 use Drupal\Core\Cache\CacheableMetadata;
 use Drupal\Core\Cache\CacheBackendInterface;
+use Drupal\Core\Cache\Context\CacheContextInterface;
 use Drupal\Core\Entity\ContentEntityInterface;
 use Drupal\Core\Entity\EntityInterface;
 use Drupal\Core\Entity\EntityMalformedException;
@@ -25,7 +26,6 @@ class ContentHierarchyStorage {
    */
   protected $cache;
 
-
   /**
    * Entity type manager service
    *
@@ -34,16 +34,24 @@ class ContentHierarchyStorage {
   protected $entityTypeManager;
 
   /**
+   * AccountPermissionsCacheContext service
+   *
+   * @var CacheContextInterface
+   */
+  protected $cacheContext;
+
+  /**
    * ContentHierarchyStorage constructor.
    *
    * @param \Drupal\content_hierarchy\ContentHierarchyData $data
    * @param \Drupal\Core\Cache\CacheBackendInterface $cache
    * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entityTypeManager
    */
-  public function __construct(ContentHierarchyData $data, CacheBackendInterface $cache, EntityTypeManagerInterface $entityTypeManager) {
+  public function __construct(ContentHierarchyData $data, CacheBackendInterface $cache, EntityTypeManagerInterface $entityTypeManager, CacheContextInterface $cacheContext) {
     $this->data = $data;
     $this->cache = $cache;
     $this->entityTypeManager = $entityTypeManager;
+    $this->cacheContext = $cacheContext;
   }
 
   /**
@@ -180,7 +188,7 @@ class ContentHierarchyStorage {
     return $items;
   }
 
-  protected function populateContent(array &$content) {
+  public function populateContent(array &$content) {
     $contents = &drupal_static(__FUNCTION__, []);
 
     if (empty($content) || empty($content['content_id'])) {
@@ -188,7 +196,7 @@ class ContentHierarchyStorage {
     }
 
     $content_id = $content['content_id'];
-    $cid = 'content:' . $content_id . ':' . $content['langcode'];
+    $cid = 'content:' . $content_id . ':' . $content['langcode'] . ':' . $this->cacheContext->getContext();
     if (empty($contents[$cid])) {
       if ($cache = $this->cache->get($cid)) {
         $contents[$cid] = $cache->data;

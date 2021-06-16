@@ -38,6 +38,11 @@ class ContentHierarchyController extends ControllerBase {
    * @return \Symfony\Component\HttpFoundation\Response
    */
   public function contentHierarchySelect($langcode, $current_lang, $placement) {
+    if ($langcode == 'undefined') {
+      /** @var \Drupal\Core\Language\LanguageManagerInterface $languageManager */
+      $languageManager = \Drupal::service('language_manager');
+      $langcode = $languageManager->getDefaultLanguage()->getId();
+    }
     $build = [
       '#theme' => 'content_options',
       '#langcode' => $langcode

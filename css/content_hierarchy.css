@@ -19,92 +19,12 @@
   background-image: url(/modules/contrib/adminimal_admin_toolbar/images/ffffff/file.svg);
 }
 
-.header-columns {
-  display: flex;
-  background: #eee;
-  border-bottom: solid 1px #ccc;
-}
-.header-column {
-  padding-left: 11px;
-  padding-top: 8px;
-  padding-bottom: 5px;
-  font-weight: 700;
-}
-.header-column:first-child {
-  flex-grow: 1;
-}
-.header-column__align-right {
-  width: 140px;
-  overflow: hidden;
-}
-
-.content-hierarchy-parent {
-  border-top: 1px solid #e6e4df;
-  list-style: none;
+input.button.toggle-item-button {
   padding: 0;
-  margin: 0;
-}
-.content-hierarchy__type {
-  opacity: 0.4;
-}
-.content-hierarchy__item {
-  display: flex;
-  flex-direction: column;
-}
-.content-hierarchy__content {
-  display: flex;
-}
-.content-hierarchy__column {
-  padding-left: 11px;
-  padding-top: 8px;
-}
-.content-hierarchy__column:first-child {
-  flex-grow: 1;
-}
-.content-hierarchy__column-align-right {
-  width: 140px;
-  overflow: hidden;
-}
-.content-hierarchy__column-align-right .dropbutton-wrapper {
-  display: inline-block !important;
-}
-.content-hierarchy__column-align-right .dropbutton-wrapper.dropbutton-multiple.open {
-  position: absolute;
-}
-.content-hierarchy__actions {
-  padding-top: 5px;
-  min-height: 32px;
-}
-.content-hierarchy-parent > .content-hierarchy__item {
-  border-bottom: 1px solid #e6e4df;
-}
-.content-hierarchy:not(.content-hierarchy-parent) {
-  margin: 0;
-  padding: 0 0 0 20px;
-  list-style: none;
-}
-.content-hierarchy .content-hierarchy__item {
-  /*padding: 10px 10px 11px;*/
-  position: relative;
-}
-.content-hierarchy .content-hierarchy__item:nth-child(2n) {
-  background-color: #eee;
-}
-.content-hierarchy .content-hierarchy__expand {
-  margin-right: 5px;
-}
-.content-hierarchy .content-hierarchy__expand a {
+  border: 0;
+  background: transparent;
+  margin: 0 1em 0 0;
   font-weight: bold;
   text-decoration: none;
   color: #000;
-}
-.content-hierarchy .content-hierarchy__expand a.use-ajax+.ajax-progress {
-  display: none;
-}
-.content-hierarchy:empty {
-  display: none;
-}
-.content-overview h2 {
-  margin-bottom: 20px;
-  font-size: 20px;
 }

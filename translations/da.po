@@ -71,3 +71,18 @@ msgstr "Herakiske forældres sti samlet"
 
 msgid "Creates url aliases based on content hierarchy"
 msgstr "Skaber url aliaser baseret på indholdsherakiet"
+
+msgid "Overview type"
+msgstr "Oversigtstype"
+
+msgid "What type of overview should be used for content hierarchy?"
+msgstr "Hvilken type oversight skal bruges til indholdstræet?"
+
+msgid "Draggable"
+msgstr "Trækbar"
+
+msgid "Foldable"
+msgstr "Foldbar"
+
+msgid "Have different content trees for each language."
+msgstr "Hav forskellige indholdstræer for hvert sprog."

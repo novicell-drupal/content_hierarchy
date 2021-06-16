@@ -5,7 +5,7 @@ services:
 
   content_hierarchy.storage:
     class: Drupal\content_hierarchy\ContentHierarchyStorage
-    arguments: ['@content_hierarchy.data', '@cache.content_hierarchy', '@entity_type.manager']
+    arguments: ['@content_hierarchy.data', '@cache.content_hierarchy', '@entity_type.manager', '@cache_context.user.permissions']
 
   content_hierarchy.widgets:
     class: Drupal\content_hierarchy\ContentHierarchyWidgets

@@ -3,7 +3,7 @@ type: module
 description: 'Creates url aliases based on content hierarchy'
 core_version_requirement: ^8.8 || ^9
 package: Content
-version: '1.0'
+version: '1.1'
 dependencies:
   - content_hierarchy
   - pathauto
