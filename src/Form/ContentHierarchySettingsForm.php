@@ -140,14 +140,15 @@ class ContentHierarchySettingsForm extends ConfigFormBase {
     $field = FieldConfig::loadByName($entity_type, $bundle, 'content_hierarchy');
     if (!empty($field)) {
       $field->delete();
+      
+      $entity_ids = \Drupal::entityQuery($entity_type)
+        ->condition('type', $bundle)
+        ->execute();
+      /** @var \Drupal\content_hierarchy\ContentHierarchyData $contentHierarchyData */
+      $contentHierarchyData = \Drupal::service('content_hierarchy.data');
+      $content_ids = $contentHierarchyData->findEntityIds($entity_type, $entity_ids);
+      $contentHierarchyData->deleteMultiple($content_ids);
     }
-    $entity_ids = \Drupal::entityQuery($entity_type)
-      ->condition('type', $bundle)
-      ->execute();
-    /** @var \Drupal\content_hierarchy\ContentHierarchyData $contentHierarchyData */
-    $contentHierarchyData = \Drupal::service('content_hierarchy.data');
-    $content_ids = $contentHierarchyData->findEntityIds($entity_type, $entity_ids);
-    $contentHierarchyData->deleteMultiple($content_ids);
   }
 
   function addFieldStorage($entity_type) {
