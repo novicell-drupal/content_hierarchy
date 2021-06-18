@@ -2,6 +2,8 @@
 
 namespace Drupal\content_hierarchy\Form;
 
+use Drupal\Core\Cache\Cache;
+use Drupal\Core\Entity\ContentEntityInterface;
 use Drupal\Core\Form\ConfigFormBase;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\field\Entity\FieldConfig;
@@ -9,6 +11,11 @@ use Drupal\field\Entity\FieldStorageConfig;
 use Drupal\node\Entity\NodeType;
 
 class ContentHierarchySettingsForm extends ConfigFormBase {
+
+  /**
+   * @var \Drupal\content_hierarchy\ContentHierarchyData
+   */
+  protected $contentHierarchyData;
 
   /**
    * Gets the configuration names that will be editable.
@@ -91,8 +98,15 @@ class ContentHierarchySettingsForm extends ConfigFormBase {
   public function submitForm(array &$form, FormStateInterface $form_state) {
     $config = $this->config('content_hierarchy.hierarchy_settings');
 
-    $config->set('multilingual', $form_state->getValue('multilingual') == 1);
     $config->set('overview_type', $form_state->getValue('overview_type'));
+
+    $multilingual = $form_state->getValue('multilingual') == 1;
+    if ($config->get('multilingual') != $multilingual) {
+      if (!$multilingual) {
+        $this->contentHierarchyData()->deleteAllButOneLanguage(\Drupal::languageManager()->getDefaultLanguage()->getId());
+      }
+      $config->set('multilingual', $multilingual);
+    }
 
     $bundles = ['node' => []];
     foreach ($form_state->getValue(['entity_bundles', 'node'], []) as $bundle) {
@@ -124,7 +138,7 @@ class ContentHierarchySettingsForm extends ConfigFormBase {
 
         foreach ($existing_bundles as $bundle) {
           if (in_array($bundle, $entity_bundles)) {
-            $this->addParentField($entity_type, $bundle);
+            $this->addEntityBundle($entity_type, $bundle);
           } else {
             $this->removeEntityBundle($entity_type, $bundle);
           }
@@ -136,18 +150,66 @@ class ContentHierarchySettingsForm extends ConfigFormBase {
     parent::submitForm($form, $form_state);
   }
 
+  /**
+   * Remove instances of an entity type or bundle from the content tree.
+   *
+   * @param string $entity_type
+   * @param string $bundle
+   */
+  function addEntityBundle($entity_type, $bundle) {
+    $field = FieldConfig::loadByName($entity_type, $bundle, 'content_hierarchy');
+    if (empty($field)) {
+      $this->addPlacementField($entity_type, $bundle);
+
+      $langcodes = [];
+      $entity_ids = \Drupal::entityQuery($entity_type)
+        ->condition('type', $bundle)
+        ->execute();
+      $entities = \Drupal::entityTypeManager()->getStorage($entity_type)->loadMultiple($entity_ids);
+      $config = $this->config('content_hierarchy.hierarchy_settings');
+      foreach ($entities as $entity) {
+        $this->contentHierarchyData()->setEntityPlacement($entity, 0);
+        $langcodes[$entity->language()->getId()] = $entity->language()->getId();
+        if ($config->get('multilingual') ?? $entity instanceof ContentEntityInterface) {
+          /** @var ContentEntityInterface $translatable */
+          $translatable = $entity;
+          $languages = $translatable->getTranslationLanguages();
+          foreach ($languages as $language) {
+            $langcodes[$language->getId()] = $language->getId();
+            $content_id = $this->contentHierarchyData()->findEntity($entity);
+            $this->contentHierarchyData()->setContentPlacement($content_id, $language->getId(), 0, $content_id);
+          }
+        }
+      }
+      $tags = [];
+      foreach ($langcodes as $langcode) {
+        $tags[] = 'content_hierarchy_list:' . $langcode;
+      }
+      Cache::invalidateTags($tags);
+    }
+  }
+
+  /**
+   * Remove instances of an entity type or bundle from the content tree.
+   *
+   * @param string $entity_type
+   * @param string $bundle
+   */
   function removeEntityBundle($entity_type, $bundle) {
     $field = FieldConfig::loadByName($entity_type, $bundle, 'content_hierarchy');
     if (!empty($field)) {
       $field->delete();
-      
+
       $entity_ids = \Drupal::entityQuery($entity_type)
         ->condition('type', $bundle)
         ->execute();
-      /** @var \Drupal\content_hierarchy\ContentHierarchyData $contentHierarchyData */
-      $contentHierarchyData = \Drupal::service('content_hierarchy.data');
-      $content_ids = $contentHierarchyData->findEntityIds($entity_type, $entity_ids);
-      $contentHierarchyData->deleteMultiple($content_ids);
+      $content_ids = $this->contentHierarchyData()->findEntityIds($entity_type, $entity_ids);
+      $this->contentHierarchyData()->deleteMultiple($content_ids);
+      $tags = [];
+      foreach (\Drupal::languageManager()->getLanguages() as $language) {
+        $tags[] = 'content_hierarchy_list:' . $language->getId();
+      }
+      Cache::invalidateTags($tags);
     }
   }
 
@@ -172,7 +234,7 @@ class ContentHierarchySettingsForm extends ConfigFormBase {
     return $fieldStorage;
   }
 
-  function addParentField($entity_type, $bundle) {
+  function addPlacementField($entity_type, $bundle) {
     $entityTypemanager = \Drupal::entityTypeManager();
 
     // Add or remove the body field, as needed.
@@ -226,4 +288,15 @@ class ContentHierarchySettingsForm extends ConfigFormBase {
     }
   }
 
+  /**
+   * Gets the content hierarchy data service.
+   *
+   * @return \Drupal\content_hierarchy\ContentHierarchyData
+   */
+  protected function contentHierarchyData() {
+    if (!$this->contentHierarchyData) {
+      $this->contentHierarchyData = \Drupal::service('content_hierarchy.data');
+    }
+    return $this->contentHierarchyData;
+  }
 }

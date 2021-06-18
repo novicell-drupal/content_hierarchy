@@ -5,8 +5,8 @@ use Drupal\Core\Cache\Cache;
 use Drupal\Core\Cache\CacheBackendInterface;
 use Drupal\Core\Database\Connection;
 use Drupal\Core\Entity\EntityInterface;
-use Drupal\Core\Entity\FieldableEntityInterface;
 use Drupal\Core\Language\LanguageInterface;
+use Drupal\Core\Language\LanguageManagerInterface;
 use PDO;
 
 class ContentHierarchyData {
@@ -19,9 +19,17 @@ class ContentHierarchyData {
    */
   protected $cache;
 
-  public function __construct(Connection $database, CacheBackendInterface $cache) {
+  /**
+   * Language Manager service
+   *
+   * @var LanguageManagerInterface
+   */
+  protected $languageManager;
+
+  public function __construct(Connection $database, CacheBackendInterface $cache, LanguageManagerInterface $languageManager) {
     $this->database = $database;
     $this->cache = $cache;
+    $this->languageManager = $languageManager;
   }
 
   /**
@@ -45,6 +53,7 @@ class ContentHierarchyData {
         $lists[$cid] = $query
           ->fields($alias)
           ->orderBy($alias . '.weight', 'ASC')
+          ->orderBy($alias . '.content_id', 'ASC')
           ->execute()
           ->fetchAllAssoc('content_id', PDO::FETCH_ASSOC);
 
@@ -278,17 +287,20 @@ class ContentHierarchyData {
     return $content;
   }
   /**
-   * @param \Drupal\Core\Entity\FieldableEntityInterface $entity
+   * @param EntityInterface $entity
    * @param int $placement
    * @param int|null $weight
    */
-  public function setEntityPlacement(FieldableEntityInterface $entity, $placement, $weight = NULL) {
+  public function setEntityPlacement(EntityInterface $entity, $placement, $weight = NULL) {
     if (empty($entity->id())) {
       return;
     }
     $content_id = $this->findEntity($entity);
     if (empty($content_id)) {
       $content_id = $this->addContent('entity', $entity->getEntityTypeId(), $entity->id());
+    }
+    if (is_null($weight)) {
+      $weight = $content_id;
     }
     $this->setContentPlacement($content_id, $entity->language()->getId(), $placement, $weight);
   }
@@ -331,6 +343,9 @@ class ContentHierarchyData {
    * @param array $content_ids
    */
   public function deleteMultiple(array $content_ids) {
+    if (empty($content_ids)) {
+      return;
+    }
     $this->database->delete('content_hierarchy')
       ->condition('content_id', $content_ids, 'IN')
       ->execute();
@@ -462,11 +477,19 @@ class ContentHierarchyData {
   /**
    * @param string|null $langcode
    *
-   * @return mixed|string
+   * @return string
    */
   function correctLangCode($langcode) {
+    static $multilingual = NULL;
+    if (is_null($multilingual)) {
+      $config = \Drupal::config('content_hierarchy.hierarchy_settings');
+      $multilingual = $config->get('multilingual') ?? TRUE;
+    }
+    if (!$multilingual) {
+      return $this->languageManager->getDefaultLanguage()->getId();
+    }
     if (is_null($langcode)) {
-      $langcode = \Drupal::languageManager()->getCurrentLanguage(LanguageInterface::TYPE_CONTENT)->getId();
+      return $this->languageManager->getCurrentLanguage(LanguageInterface::TYPE_CONTENT)->getId();
     }
     return $langcode;
   }
@@ -495,6 +518,22 @@ class ContentHierarchyData {
         break;
     }
     return $values;
+  }
+
+  /**
+   * Deletes all trees that are not the specified language
+   *
+   * @param string $langcode
+   */
+  public function deleteAllButOneLanguage($langcode) {
+    $this->database->delete('content_hierarchy_placement')
+      ->condition('langcode', $langcode, '<>')
+      ->execute();
+    $tags = [];
+    foreach (\Drupal::languageManager()->getLanguages() as $language) {
+      $tags[] = 'content_hierarchy_list:' . $language->getId();
+    }
+    Cache::invalidateTags($tags);
   }
 
 }

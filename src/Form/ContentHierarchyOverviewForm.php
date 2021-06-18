@@ -3,6 +3,7 @@
 namespace Drupal\content_hierarchy\Form;
 
 use Drupal\content_hierarchy\ContentHierarchy;
+use Drupal\content_hierarchy\ContentHierarchyData;
 use Drupal\content_hierarchy\ContentHierarchyStorage;
 use Drupal\Core\Datetime\DateFormatter;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
@@ -610,7 +611,7 @@ class ContentHierarchyOverviewForm extends FormBase {
   /**
    * Gets the content hierarchy data service.
    *
-   * @return contentHierarchyData
+   * @return ContentHierarchyData
    *   The content hierarchy data service.
    */
   protected function getContentHierarchyData() {

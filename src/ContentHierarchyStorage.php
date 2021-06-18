@@ -316,7 +316,13 @@ class ContentHierarchyStorage {
     if (empty($content)) {
       return;
     }
-    Cache::invalidateTags($this->getContentCacheTags([$content]));
+    $contents = [$content];
+    $children = $this->loadMultiple($this->data->getChildrenOf($content->id()));
+    foreach ($children as $child) {
+      $this->data->deleteContent($child->id());
+      $contents[] = $child;
+    }
+    Cache::invalidateTags($this->getContentCacheTags($contents));
     $this->data->deleteContent($content->id());
   }
 
