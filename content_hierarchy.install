@@ -91,3 +91,8 @@ function content_hierarchy_install() {
 function content_hierarchy_uninstall() {
 
 }
+
+function content_hierarchy_update_8001() {
+  $configFactory = \Drupal::configFactory();
+  $configFactory->getEditable('content_hierarchy.hierarchy_settings')->clear('overview_type');
+}

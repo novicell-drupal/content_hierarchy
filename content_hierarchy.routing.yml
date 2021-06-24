@@ -10,12 +10,20 @@ content_hierarchy.content_overview:
   path: '/admin/content/hierarchy'
   defaults:
     _form: '\Drupal\content_hierarchy\Form\ContentHierarchyOverviewForm'
-    _title: 'Content Overview Page'
+    _title: 'Content tree'
+  requirements:
+    _permission: 'access content overview'
+
+content_hierarchy.content_sorting:
+  path: '/admin/content/hierarchy/sorting'
+  defaults:
+    _form: '\Drupal\content_hierarchy\Form\ContentHierarchySortingForm'
+    _title: 'Content sorting'
   requirements:
     _permission: 'access content overview'
 
 content_hierarchy.select:
-  path: '/admin/content/hierarchy/ajax/select/{langcode}/{current_lang}/{placement}'
+  path: '/admin/content/hierarchy/ajax/select/{langcode}/{current_lang}/{content_id}'
   defaults:
     _controller: '\Drupal\content_hierarchy\Controller\ContentHierarchyController::contentHierarchySelect'
   requirements:

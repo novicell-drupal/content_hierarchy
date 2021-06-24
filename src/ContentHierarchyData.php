@@ -88,32 +88,41 @@ class ContentHierarchyData {
       }
       else {
         $items = $this->getLanguageList($langcode, $allow_excluded);
-        $parents = [];
         foreach ($items as $content_id => $item) {
           $items[$content_id]['children'] = [];
-          $items[$content_id]['depth'] = 0;
-          $parents[$item['parent_id']] = $item['parent_id'];
+        }
+        foreach ($items as $content_id => $item) {
+          if ($item['parent_id'] > 0) {
+            $items[$item['parent_id']]['children'][] = $content_id;
+          }
         }
 
-        while(count($parents) > 1) {
-          foreach ($items as $content_id => $item) {
-            if (!in_array($content_id, $parents) && $item['parent_id'] > 0) {
-              $items[$item['parent_id']]['children'][$content_id] = $item;
-              $this->increaseDepthInTree($items[$item['parent_id']]['children'][$content_id]);
-              unset($items[$content_id]);
-            }
-          }
-          $parents = [];
-          foreach ($items as $item) {
-            $parents[$item['parent_id']] = $item['parent_id'];
+        $tree = [];
+        foreach ($items as $content_id => $item) {
+          if ($item['parent_id'] == 0) {
+            $tree[$content_id] = $this->getLanguageTreeItem($items, $content_id);
           }
         }
-        $trees[$cid] = $items;
+
+        $trees[$cid] = $tree;
         $this->cache->set($cid, $trees[$cid], Cache::PERMANENT, ['content_hierarchy_list:' . $langcode]);
       }
     }
 
     return $trees[$cid];
+  }
+
+  public function getLanguageTreeItem(array $items, $content_id, $depth = 0) {
+    $item = $items[$content_id];
+    $item['depth'] = $depth;
+    if (!empty($item['children'])) {
+      $children = [];
+      foreach ($item['children'] as $child_id) {
+        $children[$child_id] = $this->getLanguageTreeItem($items, $child_id, $depth + 1);
+      }
+      $item['children'] = $children;
+    }
+    return $item;
   }
 
   /**

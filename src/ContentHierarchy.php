@@ -315,6 +315,13 @@ class ContentHierarchy {
   }
 
   /**
+   * @param int $depth
+   */
+  public function setDepth(int $depth): void {
+    $this->depth = $depth;
+  }
+
+  /**
    * @return int
    */
   public function getWeight() {

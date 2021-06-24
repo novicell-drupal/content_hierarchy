@@ -43,7 +43,7 @@ function content_hierarchy_theme() {
     'content_options' => [
       'variables' => [
         'langcode' => NULL,
-        'placement' => -1
+        'content_id' => NULL
       ],
     ],
   ];
@@ -54,12 +54,12 @@ function content_hierarchy_theme() {
  */
 function content_hierarchy_preprocess_content_options(&$variables, $hook) {
   $langcode = $variables['langcode'];
-  $placement = $variables['placement'];
+  $content_id = $variables['content_id'] ?? NULL;
   /** @var \Drupal\content_hierarchy\ContentHierarchyWidgets $widgets */
   $widgets = \Drupal::service('content_hierarchy.widgets');
   /** @var \Drupal\content_hierarchy\ContentHierarchyStorage $storage */
   $storage = \Drupal::service('content_hierarchy.storage');
-  $variables['items'] = $widgets->getRenderableOptions($langcode, $placement);
+  $variables['items'] = $widgets->getRenderableOptions($langcode, $content_id);
   $variables['#cache'] = [
     'tags' => $storage->getListCacheTags($langcode)
   ];

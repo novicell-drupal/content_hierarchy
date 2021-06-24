@@ -55,20 +55,21 @@ class ContentHierarchySettingsForm extends ConfigFormBase {
       '#description' => $this->t(
         'Configure how the content hierarchy works and what nodes are included in the hierarchy lists.'
       ),
-      '#prefix' => '<div id="table-wrapper">',
-      '#suffix' => '</div>',
     ];
 
     $options = [
-      'draggable' => $this->t('Draggable'),
-      'foldable' => $this->t('Foldable')
+      10 => 10,
+      25 => 25,
+      50 => 50,
+      100 => 100,
+      200 => 200
     ];
-    $form['overview_type'] = [
+    $form['contents_per_page_admin'] = [
       '#type' => 'select',
-      '#title' => $this->t('Overview type'),
-      '#description' => $this->t('What type of overview should be used for content hierarchy?'),
+      '#title' => $this->t('Content per page'),
+      '#description' => $this->t('How many content items to display per page in sortable overview.'),
       '#options' => $options,
-      '#default_value' => $config->get('overview_type') ?? 'draggable'
+      '#default_value' => $config->get('contents_per_page_admin') ?? 50
     ];
 
     $form['multilingual'] = [
@@ -77,6 +78,12 @@ class ContentHierarchySettingsForm extends ConfigFormBase {
       '#description' => $this->t('Have different content trees for each language.'),
       '#default_value' => $config->get('multilingual') ?? TRUE
     ];
+
+    $form['entity_bundles'] = array(
+      '#type' => 'details',
+      '#title' => $this->t('Entity types'),
+      '#open' => TRUE
+    );
 
     $bundles = $config->get('entity_bundles') ?? [];
     $options = [];
@@ -98,7 +105,7 @@ class ContentHierarchySettingsForm extends ConfigFormBase {
   public function submitForm(array &$form, FormStateInterface $form_state) {
     $config = $this->config('content_hierarchy.hierarchy_settings');
 
-    $config->set('overview_type', $form_state->getValue('overview_type'));
+    $config->set('contents_per_page_admin', $form_state->getValue('contents_per_page_admin'));
 
     $multilingual = $form_state->getValue('multilingual') == 1;
     if ($config->get('multilingual') != $multilingual) {

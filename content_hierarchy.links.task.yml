@@ -1,5 +1,15 @@
-content_hierarchy.content_overview:
+content_hierarchy.content:
   route_name: content_hierarchy.content_overview
   base_route: system.admin_content
   title: 'Content tree'
   weight: -15
+
+content_hierarchy.content.overview:
+  route_name: content_hierarchy.content_overview
+  parent_id: content_hierarchy.content
+  title: 'Overview'
+
+content_hierarchy.content.sorting:
+  route_name: content_hierarchy.content_sorting
+  parent_id: content_hierarchy.content
+  title: 'Sorting'

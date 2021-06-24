@@ -102,6 +102,7 @@ class ContentHierarchySelect extends WidgetBase implements ContainerFactoryPlugi
   public function formElement(FieldItemListInterface $items, $delta, array $element, array &$form, FormStateInterface $form_state) {
     $entity = $items->getEntity();
     $placement = isset($items[$delta]->value) ? $items[$delta]->value : -1;
+    $content_id = NULL;
 
     if(!$entity->isNew()) {
       $langcode = $entity->language()->getId();
@@ -132,7 +133,7 @@ class ContentHierarchySelect extends WidgetBase implements ContainerFactoryPlugi
         '#attributes' => ['class' => ['content-hierarchy-select']],
         '#type' => 'select',
         '#default_value' => $placement,
-        '#options' => $this->widgets->getAllOptions(),
+        '#options' => $this->widgets->getAllOptions($langcode),
         '#element_validate' => [
           [$this, 'validate'],
         ],
@@ -142,7 +143,7 @@ class ContentHierarchySelect extends WidgetBase implements ContainerFactoryPlugi
         '#type' => 'hidden',
         '#default_value' => json_encode([
           'langcode' => $langcode,
-          'placement' => $placement,
+          'content_id' => $content_id,
         ])
       );
     } else {

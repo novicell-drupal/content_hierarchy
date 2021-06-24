@@ -133,7 +133,7 @@ class ContentHierarchyStorage {
     $tree = $this->getTree($langcode, $allow_excluded);
     $items = [];
     foreach ($tree as $key => $item) {
-      $items[$key] = $item;
+      $items[] = $item;
       if (!empty($item->getChildren())) {
         $this->addChildrenToList($items, $item->getChildren());
       }
@@ -147,7 +147,7 @@ class ContentHierarchyStorage {
    */
   protected function addChildrenToList(array &$items, array $children) {
     foreach ($children as $key => $item) {
-      $items[$key] = $item;
+      $items[] = $item;
       if (!empty($item->getChildren())) {
         $this->addChildrenToList($items, $item->getChildren());
       }

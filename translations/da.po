@@ -30,8 +30,14 @@ msgstr "Alt indhold"
 msgid "Content tree"
 msgstr "Indholdstræ"
 
+msgid "Content sorting"
+msgstr "Indholdssortering"
+
 msgid "Content"
 msgstr "Indhold"
+
+msgid "Sorting"
+msgstr "Sortering"
 
 msgid "Content Hierarchy settings"
 msgstr "Indholdshierarki indstillinger"
@@ -72,17 +78,14 @@ msgstr "Herakiske forældres sti samlet"
 msgid "Creates url aliases based on content hierarchy"
 msgstr "Skaber url aliaser baseret på indholdsherakiet"
 
-msgid "Overview type"
-msgstr "Oversigtstype"
+msgid "Content per page"
+msgstr "Indhold per side"
 
-msgid "What type of overview should be used for content hierarchy?"
-msgstr "Hvilken type oversight skal bruges til indholdstræet?"
-
-msgid "Draggable"
-msgstr "Trækbar"
-
-msgid "Foldable"
-msgstr "Foldbar"
+msgid "How many content items to display per page in sortable overview."
+msgstr "Hvor meget indhold skal vises per side i sortingsoversigten."
 
 msgid "Have different content trees for each language."
 msgstr "Hav forskellige indholdstræer for hvert sprog."
+
+msgid "Weight for content"
+msgstr "Vægt for indhold"
