@@ -15,7 +15,7 @@ function content_hierarchy_path_update_8001() {
   if (!is_null($pattern)) {
     $pattern->delete();
   }
-  
+
   /** @var \Drupal\content_hierarchy_path\ContentHierarchyPathUpdater $updater */
   $updater = Drupal::service('content_hierarchy_path.updater');
   $updater->updateConfigs();

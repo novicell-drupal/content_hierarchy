@@ -7,7 +7,7 @@ content_hierarchy.content:
 content_hierarchy.content.overview:
   route_name: content_hierarchy.content_overview
   parent_id: content_hierarchy.content
-  title: 'Overview'
+  title: 'Hierarchy'
 
 content_hierarchy.content.sorting:
   route_name: content_hierarchy.content_sorting
