@@ -343,15 +343,7 @@ class ContentHierarchyData {
    * @param int $content_id
    */
   public function deleteContent($content_id) {
-    \Drupal::moduleHandler()
-      ->invokeAll('content_hierarchy_delete', [$content_id]);
-
-    $this->database->delete('content_hierarchy')
-      ->condition('content_id', $content_id)
-      ->execute();
-    $this->database->delete('content_hierarchy_placement')
-      ->condition('content_id', $content_id)
-      ->execute();
+    $this->deleteMultiple([$content_id]);
   }
 
   /**
@@ -365,6 +357,13 @@ class ContentHierarchyData {
     foreach ($content_ids as $content_id) {
       \Drupal::moduleHandler()
         ->invokeAll('content_hierarchy_delete', [$content_id]);
+
+      foreach (\Drupal::languageManager()->getLanguages() as $language) {
+        $children = $this->getChildrenOf($content_id, $language->getId(), FALSE);
+        foreach ($children as $child_id) {
+          $this->setContentPlacement($child_id, $language->getId(), 0);
+        }
+      }
     }
 
     $this->database->delete('content_hierarchy')
