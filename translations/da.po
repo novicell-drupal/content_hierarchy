@@ -60,6 +60,9 @@ msgstr "Ignorér disse indholdstyper på indholdslisten"
 msgid "Content Hierarchy overview"
 msgstr "Indholdshierarki oversigt"
 
+msgid "Content Hierarchy pattern"
+msgstr "Indholdshierarki mønster"
+
 msgid "Placement: @placement"
 msgstr "Placering: @placement"
 

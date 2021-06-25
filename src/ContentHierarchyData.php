@@ -253,6 +253,9 @@ class ContentHierarchyData {
    * @return array
    */
   public function findEntityIds($entity_type, array $entity_ids) {
+    if (empty($entity_ids)) {
+      return[];
+    }
     $query = $this->database->select('content_hierarchy', 'ch')
       ->fields('ch', ['content_id'])
       ->condition('source', 'entity')
@@ -340,6 +343,9 @@ class ContentHierarchyData {
    * @param int $content_id
    */
   public function deleteContent($content_id) {
+    \Drupal::moduleHandler()
+      ->invokeAll('content_hierarchy_delete', [$content_id]);
+
     $this->database->delete('content_hierarchy')
       ->condition('content_id', $content_id)
       ->execute();
@@ -355,6 +361,12 @@ class ContentHierarchyData {
     if (empty($content_ids)) {
       return;
     }
+
+    foreach ($content_ids as $content_id) {
+      \Drupal::moduleHandler()
+        ->invokeAll('content_hierarchy_delete', [$content_id]);
+    }
+
     $this->database->delete('content_hierarchy')
       ->condition('content_id', $content_ids, 'IN')
       ->execute();
@@ -420,6 +432,13 @@ class ContentHierarchyData {
         ->condition('content_id', $content_id)
         ->condition('langcode', $langcode)
         ->execute();
+    }
+    if (is_null($current)) {
+      \Drupal::moduleHandler()
+        ->invokeAll('content_hierarchy_insert', [$content_id, $langcode]);
+    } else {
+      \Drupal::moduleHandler()
+        ->invokeAll('content_hierarchy_update', [$content_id, $langcode]);
     }
   }
 

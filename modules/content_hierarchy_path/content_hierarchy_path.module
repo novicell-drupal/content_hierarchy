@@ -5,9 +5,9 @@
  * Contains content_hierarchy_path.module.
  */
 
+use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Render\BubbleableMetadata;
 use Drupal\Core\Routing\RouteMatchInterface;
-use Drupal\content_hierarchy\ContentHierarchyUtils;
 
 /**
  * Implements hook_help().
@@ -46,10 +46,18 @@ function content_hierarchy_path_token_info() {
     'description' => t('Hierarchy ancestors path joined'),
   ];
 
-  return [
-    'types' => ['node' => $type],
-    'tokens' => ['node' => $tokens],
+  $result = [
+    'types' => [],
+    'tokens' => [],
   ];
+
+  $config = \Drupal::configFactory()->get('content_hierarchy.hierarchy_settings');
+  $entity_bundles = $config->get('entity_bundles') ?? [];
+  foreach ($entity_bundles as $entity_type => $bundle_ids) {
+    $result['types'][$entity_type] = $type;
+    $result['tokens'][$entity_type] = $tokens;
+  }
+  return $result;
 }
 
 /**
@@ -58,7 +66,10 @@ function content_hierarchy_path_token_info() {
 function content_hierarchy_path_tokens($type, $tokens, array $data, array $options, BubbleableMetadata $bubbleable_metadata) {
   $replacements = [];
 
-  if ($type == 'node') {
+  $config = \Drupal::configFactory()->get('content_hierarchy.hierarchy_settings');
+  $entity_bundles = $config->get('entity_bundles') ?? [];
+
+  if (array_key_exists($type, $entity_bundles)) {
     /** @var \Drupal\content_hierarchy\ContentHierarchyStorage $storage */
     $storage = \Drupal::service('content_hierarchy.storage');
     $cleaner = \Drupal::service('pathauto.alias_cleaner');
@@ -66,9 +77,9 @@ function content_hierarchy_path_tokens($type, $tokens, array $data, array $optio
       // Find the desired token by name.
       switch ($name) {
         case 'ancestors-joined-path':
-          /** @var \Drupal\node\Entity\Node $node */
-          $node = $data['node'];
-          $content = $storage->loadFromEntity($node);
+          /** @var \Drupal\Core\Entity\ContentEntityInterface $entity */
+          $entity = $data[$type];
+          $content = $storage->loadFromEntity($entity);
           if (is_null($content)) {
             break;
           }
@@ -89,4 +100,25 @@ function content_hierarchy_path_tokens($type, $tokens, array $data, array $optio
     }
   }
   return $replacements;
+}
+
+/**
+ * Implements hook_form_BASE_FORM_ID_alter().
+ */
+function content_hierarchy_path_form_content_hierarchy_settings_form_alter(&$form, \Drupal\Core\Form\FormStateInterface $form_state, $form_id) {
+  $form['#submit'][] = 'content_hierarchy_path_form_submit';
+}
+
+function content_hierarchy_path_form_submit(array &$form, FormStateInterface $form_state) {
+  /** @var \Drupal\content_hierarchy_path\ContentHierarchyPathUpdater $updater */
+  $updater = Drupal::service('content_hierarchy_path.updater');
+  $updater->updateConfigs();
+}
+
+/**
+ * Implements hook_content_hierarchy_update().
+ */
+function content_hierarchy_path_content_hierarchy_update($content_id, $langcode) {
+  $queue = \Drupal::queue('content_hierarchy_path_update');
+  $queue->createItem(['content_id' => $content_id, 'langcode' => $langcode]);
 }

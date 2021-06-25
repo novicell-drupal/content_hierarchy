@@ -1,0 +1,4 @@
+services:
+  content_hierarchy_path.updater:
+    class: Drupal\content_hierarchy_path\ContentHierarchyPathUpdater
+    arguments: ['@content_hierarchy.storage', '@pathauto.generator', '@config.factory', '@queue']
