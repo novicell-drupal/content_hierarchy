@@ -120,7 +120,7 @@ class ContentHierarchyStorage {
    * @return \Drupal\content_hierarchy\ContentHierarchy[]
    */
   public function findChildren(ContentHierarchy $content) {
-    return $this->loadMultiple($this->data->getChildrenOf($content->id(), $content->getLangcode(), FALSE));
+    return $this->loadMultiple($this->data->getChildrenOf($content->id(), $content->getLangcode(), FALSE), $content->getLangcode());
   }
 
   /**
