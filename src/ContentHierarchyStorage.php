@@ -242,14 +242,12 @@ class ContentHierarchyStorage {
           foreach ($contents[$cid]['operations'] as $key => $operation) {
             $contents[$cid]['operations'][$key]['url']->setOption('query', []);
           }
+          $this->moduleHandler->alter('content_hierarchy_populate_content', $contents[$cid], $cacheMetadata);
         }
         $this->cache->set($cid, $contents[$cid], $cacheMetadata->getCacheMaxAge(), $cacheMetadata->getCacheTags());
       }
     }
-    if (isset($contents[$cid])) {
-      $this->moduleHandler->alter('content_hierarchy_populate_content', $contents[$cid]);
-      $content += $contents[$cid];
-    }
+    $content += $contents[$cid];
   }
 
   /**
