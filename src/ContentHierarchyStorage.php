@@ -9,6 +9,7 @@ use Drupal\Core\Entity\ContentEntityInterface;
 use Drupal\Core\Entity\EntityInterface;
 use Drupal\Core\Entity\EntityMalformedException;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
+use Drupal\Core\Extension\ModuleHandler;
 
 class ContentHierarchyStorage {
 
@@ -41,17 +42,25 @@ class ContentHierarchyStorage {
   protected $cacheContext;
 
   /**
+   * Module handler.
+   *
+   * @var ModuleHandler
+   */
+  protected $moduleHandler;
+
+  /**
    * ContentHierarchyStorage constructor.
    *
    * @param \Drupal\content_hierarchy\ContentHierarchyData $data
    * @param \Drupal\Core\Cache\CacheBackendInterface $cache
    * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entityTypeManager
    */
-  public function __construct(ContentHierarchyData $data, CacheBackendInterface $cache, EntityTypeManagerInterface $entityTypeManager, CacheContextInterface $cacheContext) {
+  public function __construct(ContentHierarchyData $data, CacheBackendInterface $cache, EntityTypeManagerInterface $entityTypeManager, CacheContextInterface $cacheContext, ModuleHandler $moduleHandler) {
     $this->data = $data;
     $this->cache = $cache;
     $this->entityTypeManager = $entityTypeManager;
     $this->cacheContext = $cacheContext;
+    $this->moduleHandler = $moduleHandler;
   }
 
   /**
@@ -213,6 +222,7 @@ class ContentHierarchyStorage {
           $cacheMetadata->addCacheableDependency($entity);
 
           $contents[$cid]['title'] = $entity->label();
+          $contents[$cid]['entity_id'] = $entity->id();
           $contents[$cid]['changed'] = $entity->get('changed')->first()->getValue()['value'] ?? NULL;
           $contents[$cid]['created'] = $entity->get('created')->first()->getValue()['value'] ?? NULL;
           $contents[$cid]['entity_type'] = $entity->getEntityTypeId();
@@ -232,6 +242,7 @@ class ContentHierarchyStorage {
           foreach ($contents[$cid]['operations'] as $key => $operation) {
             $contents[$cid]['operations'][$key]['url']->setOption('query', []);
           }
+          $this->moduleHandler->alter('content_hierarchy_populate_content', $contents[$cid], $cacheMetadata);
         }
         $this->cache->set($cid, $contents[$cid], $cacheMetadata->getCacheMaxAge(), $cacheMetadata->getCacheTags());
       }
