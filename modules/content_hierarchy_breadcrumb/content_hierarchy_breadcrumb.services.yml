@@ -1,6 +1,6 @@
 services:
  content_hierarche_breadcrumb.breadcrumb:
     class: Drupal\content_hierarchy_breadcrumb\Breadcrumb\BreadcrumbBuilder
-    arguments: ['@router.admin_context', '@content_hierarchy.storage']
+    arguments: ['@router.admin_context', '@content_hierarchy.storage', '@logger.factory']
     tags:
     - { name: breadcrumb_builder, priority: 1004 }
