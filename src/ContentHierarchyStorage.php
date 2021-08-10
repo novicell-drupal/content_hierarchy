@@ -218,7 +218,9 @@ class ContentHierarchyStorage {
             $this->data->deleteContent($content_id);
             return;
           }
-          $entity = $entity->getTranslation($content['langcode']);
+          if ($entity->hasTranslation($content['langcode'])) {
+            $entity = $entity->getTranslation($content['langcode']);
+          }
           $cacheMetadata->addCacheableDependency($entity);
 
           $contents[$cid]['title'] = $entity->label();
