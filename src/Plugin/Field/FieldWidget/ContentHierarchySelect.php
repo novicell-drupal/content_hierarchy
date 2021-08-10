@@ -15,7 +15,6 @@ use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Plugin\ContainerFactoryPluginInterface;
 use Drupal\Core\Routing\CurrentRouteMatch;
 use Drupal\Core\Session\AccountProxyInterface;
-use Drupal\entity_hierarchy\Plugin\Field\FieldWidget\EntityReferenceHierarchySelect;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
