@@ -171,7 +171,7 @@ class ContentHierarchy {
   public function getEntity(): ?EntityInterface {
     if (is_null($this->entity)) {
       $this->entity = \Drupal::entityTypeManager()->getStorage($this->getType())->load($this->getEntityId());
-      if ($this->entity instanceof ContentEntityInterface) {
+      if ($this->entity instanceof ContentEntityInterface && $this->entity->hasTranslation($this->getLangcode())) {
         $this->entity = $this->entity->getTranslation($this->getLangcode());
       }
     }
