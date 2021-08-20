@@ -3,6 +3,6 @@ type: module
 description: 'Creates breadcrumbs based on content hierarchy'
 core_version_requirement: ^8.8 || ^9
 package: 'Content'
-version: '1.2'
+version: '1.3'
 dependencies:
   - content_hierarchy
