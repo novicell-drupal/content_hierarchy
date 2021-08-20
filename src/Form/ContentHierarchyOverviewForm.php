@@ -33,7 +33,7 @@ class ContentHierarchyOverviewForm extends ContentHierarchyOverviewBase {
     $open_items = $form_state->get('open_items');
     if (is_null($open_items)) {
       $open_items = ['0' => TRUE];
-      $items = $this->getContentHierarchyData()->getLanguageListWithDepth($langcode, $open_items);
+      $items = $this->contentHierarchyData->getLanguageListWithDepth($langcode, $open_items);
       foreach ($items as $key => $item) {
         if ($item['depth'] < $maxDepth) {
           $open_items[$item['content_id']] = TRUE;
@@ -41,7 +41,7 @@ class ContentHierarchyOverviewForm extends ContentHierarchyOverviewBase {
       }
       $form_state->set('open_items', $open_items);
     }
-    $items = $this->getContentHierarchyData()->getLanguageListWithDepth($langcode, $open_items);
+    $items = $this->contentHierarchyData->getLanguageListWithDepth($langcode, $open_items);
 
     $form['content'] = [
       '#type' => 'table',
@@ -73,7 +73,7 @@ class ContentHierarchyOverviewForm extends ContentHierarchyOverviewBase {
         'operations' => []
       ];
 
-      $this->getContentHierarchyStorage()->populateContent($item);
+      $this->contentHierarchyStorage->populateContent($item);
       $form['content'][$key]['#content'] = $item;
 
       if (!is_null($item['depth']) && $item['depth'] > 0) {

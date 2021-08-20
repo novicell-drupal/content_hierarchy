@@ -59,7 +59,7 @@ class ContentHierarchySortingForm extends ContentHierarchyOverviewBase {
 
     $delta = 0;
     $content_deltas = [];
-    $tree = $this->getContentHierarchyStorage()->getListWithDepth($langcode, FALSE);
+    $tree = $this->contentHierarchyStorage->getListWithDepth($langcode, FALSE);
     $tree_index = 0;
     do {
       // In case this tree is completely empty.
@@ -359,7 +359,7 @@ class ContentHierarchySortingForm extends ContentHierarchyOverviewBase {
 
     $langcode = $form_state->get(['content_hierarchy', 'langcode']);
     $changed_content = [];
-    $tree = $this->getContentHierarchyStorage()->getListWithDepth($langcode, FALSE);
+    $tree = $this->contentHierarchyStorage->getListWithDepth($langcode, FALSE);
 
     if (empty($tree)) {
       return;
@@ -416,7 +416,7 @@ class ContentHierarchySortingForm extends ContentHierarchyOverviewBase {
 
     if (!empty($changed_content)) {
       // Save all updated content.
-      $this->getContentHierarchyStorage()->saveMultiple($changed_content);
+      $this->contentHierarchyStorage->saveMultiple($changed_content);
 
       $this->messenger()->addStatus($this->t('The configuration options have been saved.'));
     }

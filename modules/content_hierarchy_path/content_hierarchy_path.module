@@ -26,6 +26,24 @@ function content_hierarchy_path_help($route_name, RouteMatchInterface $route_mat
 }
 
 /**
+ * Implements hook_content_hierarchy_entity_types_alter().
+ */
+function content_hierarchy_path_content_hierarchy_entity_types_alter(&$entity_types) {
+  if (isset($entity_types['node'])) {
+    $entity_types['node']['token_type'] = 'node';
+    $entity_types['node']['token_label_field'] = 'title';
+  }
+  if (isset($entity_types['media'])) {
+    $entity_types['media']['token_type'] = 'media';
+    $entity_types['media']['token_label_field'] = 'name';
+  }
+  if (isset($entity_types['taxonomy_term'])) {
+    $entity_types['taxonomy_term']['token_type'] = 'term';
+    $entity_types['taxonomy_term']['token_label_field'] = 'name';
+  }
+}
+
+/**
  * Implements hook_token_info()
  */
 function content_hierarchy_path_token_info() {
@@ -51,11 +69,11 @@ function content_hierarchy_path_token_info() {
     'tokens' => [],
   ];
 
-  $config = \Drupal::configFactory()->get('content_hierarchy.hierarchy_settings');
-  $entity_bundles = $config->get('entity_bundles') ?? [];
-  foreach ($entity_bundles as $entity_type => $bundle_ids) {
-    $result['types'][$entity_type] = $type;
-    $result['tokens'][$entity_type] = $tokens;
+  /** @var \Drupal\content_hierarchy_path\ContentHierarchyPathUpdater $updater */
+  $updater = Drupal::service('content_hierarchy_path.updater');
+  foreach ($updater->getActiveSupportedEntityTypes() as $entity_type_id => $type_info) {
+    $result['types'][$type_info['token_type']] = $type;
+    $result['tokens'][$type_info['token_type']] = $tokens;
   }
   return $result;
 }
@@ -66,10 +84,14 @@ function content_hierarchy_path_token_info() {
 function content_hierarchy_path_tokens($type, $tokens, array $data, array $options, BubbleableMetadata $bubbleable_metadata) {
   $replacements = [];
 
-  $config = \Drupal::configFactory()->get('content_hierarchy.hierarchy_settings');
-  $entity_bundles = $config->get('entity_bundles') ?? [];
+  /** @var \Drupal\content_hierarchy_path\ContentHierarchyPathUpdater $updater */
+  $updater = Drupal::service('content_hierarchy_path.updater');
+  $active_types = [];
+  foreach ($updater->getActiveSupportedEntityTypes() as $entity_type_id => $type_info) {
+    $active_types[$type_info['token_type']] = $entity_type_id;
+  }
 
-  if (array_key_exists($type, $entity_bundles)) {
+  if (array_key_exists($type, $active_types)) {
     /** @var \Drupal\content_hierarchy\ContentHierarchyStorage $storage */
     $storage = \Drupal::service('content_hierarchy.storage');
     $cleaner = \Drupal::service('pathauto.alias_cleaner');

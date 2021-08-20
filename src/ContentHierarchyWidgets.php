@@ -1,6 +1,9 @@
 <?php
 namespace Drupal\content_hierarchy;
 
+use Drupal\Core\Entity\EntityTypeBundleInfoInterface;
+use Drupal\Core\Entity\EntityTypeInterface;
+use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 
 class ContentHierarchyWidgets {
@@ -21,9 +24,25 @@ class ContentHierarchyWidgets {
    */
   protected $data;
 
-  public function __construct(ContentHierarchyStorage $storage, ContentHierarchyData $data) {
+  /**
+   * The entity type manager service.
+   *
+   * @var \Drupal\Core\Entity\EntityTypeManagerInterface
+   */
+  protected $entityTypeManager;
+
+  /**
+   * The entity type type bundle info service.
+   *
+   * @var \Drupal\Core\Entity\EntityTypeBundleInfoInterface
+   */
+  protected $entityTypeBundleInfo;
+
+  public function __construct(ContentHierarchyStorage $storage, EntityTypeManagerInterface $entityTypeManager, EntityTypeBundleInfoInterface $entityTypeBundleInfo, ContentHierarchyData $data) {
     $this->storage = $storage;
     $this->data = $data;
+    $this->entityTypeManager = $entityTypeManager;
+    $this->entityTypeBundleInfo = $entityTypeBundleInfo;
   }
 
   /**
@@ -138,4 +157,47 @@ class ContentHierarchyWidgets {
 
     return $items;
   }
+
+  /**
+   * @return array
+   */
+  public function getSupportedEntityTypes() {
+    $types = [];
+    $entity_types = $this->entityTypeManager->getDefinitions();
+    foreach ($entity_types as $entity_type) {
+      if (!$this->canBePutInHierarchy($entity_type)) {
+        continue;
+      }
+
+      $bundles = [];
+      foreach ($this->entityTypeBundleInfo->getBundleInfo($entity_type->id()) as $bundle_id => $bundle) {
+        $bundles[$bundle_id] = [
+          'id' => $bundle_id,
+          'label' => $bundle['label']
+        ];
+      }
+
+      $types[$entity_type->id()] = [
+        'id' => $entity_type->id(),
+        'label' => $entity_type->getLabel(),
+        'bundles' => $bundles,
+      ];
+    }
+    \Drupal::moduleHandler()->alter('content_hierarchy_entity_types', $types);
+
+    return $types;
+  }
+
+  /**
+   * @param \Drupal\Core\Entity\EntityTypeInterface $entity_type
+   *
+   * @return bool
+   */
+  protected function canBePutInHierarchy(EntityTypeInterface $entity_type): bool {
+    if (!$entity_type->hasViewBuilderClass() || !$entity_type->isCommonReferenceTarget() || !$entity_type->hasRouteProviders() || $entity_type->getBundleEntityType() == NULL) {
+      return false;
+    }
+    return true;
+  }
+
 }

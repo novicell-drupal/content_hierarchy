@@ -101,7 +101,7 @@ class ContentHierarchyStorage {
    *
    * @return ContentHierarchy|null
    */
-  public function loadFromEntity($entity) {
+  public function loadFromEntity(EntityInterface $entity) {
     $content_id = $this->data->findEntity($entity);
     if (is_null($content_id)) {
       return NULL;
@@ -223,17 +223,34 @@ class ContentHierarchyStorage {
           }
           $cacheMetadata->addCacheableDependency($entity);
 
+
           $contents[$cid]['title'] = $entity->label();
           $contents[$cid]['entity_id'] = $entity->id();
-          $contents[$cid]['changed'] = $entity->get('changed')->first()->getValue()['value'] ?? NULL;
-          $contents[$cid]['created'] = $entity->get('created')->first()->getValue()['value'] ?? NULL;
+          if ($entity->hasField('changed') && !$entity->get('changed')->isEmpty()) {
+            $contents[$cid]['changed'] = $entity->get('changed')->first()->getValue()['value'] ?? NULL;
+          } else {
+            $contents[$cid]['changed'] = NULL;
+          }
+          if ($entity->hasField('created') && !$entity->get('created')->isEmpty()) {
+            $contents[$cid]['created'] = $entity->get('created')
+                ->first()
+                ->getValue()['value'] ?? NULL;
+          } else {
+            $contents[$cid]['created'] = NULL;
+          }
           $contents[$cid]['entity_type'] = $entity->getEntityTypeId();
           $contents[$cid]['entity_bundle'] = $entity->bundle();
-          $status = $entity->get('status')->first()->getValue()['value'] ?? NULL;
+          if ($entity->hasField('status') && !$entity->get('status')->isEmpty()) {
+            $status = $entity->get('status')->first()->getValue()['value'] ?? NULL;
+          } else {
+            $status = $contents[$cid]['created'] = NULL;
+          }
           if ($status === '1') {
             $contents[$cid]['status'] = 'Published';
           } elseif ($status === '0') {
             $contents[$cid]['status'] = 'Unpublished';
+          } elseif ($status === NULL) {
+            $contents[$cid]['status'] = 'Unknown';
           }
           try {
             $contents[$cid]['url'] = $entity->toUrl();

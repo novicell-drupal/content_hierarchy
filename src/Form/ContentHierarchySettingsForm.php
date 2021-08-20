@@ -2,20 +2,80 @@
 
 namespace Drupal\content_hierarchy\Form;
 
+use Drupal\content_hierarchy\ContentHierarchyData;
+use Drupal\content_hierarchy\ContentHierarchyWidgets;
+use Drupal\content_moderation\ModerationInformationInterface;
 use Drupal\Core\Cache\Cache;
+use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Entity\ContentEntityInterface;
+use Drupal\Core\Entity\EntityTypeBundleInfoInterface;
+use Drupal\Core\Entity\EntityTypeInterface;
+use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Form\ConfigFormBase;
 use Drupal\Core\Form\FormStateInterface;
+use Drupal\Core\Messenger\MessengerInterface;
 use Drupal\field\Entity\FieldConfig;
 use Drupal\field\Entity\FieldStorageConfig;
-use Drupal\node\Entity\NodeType;
+use Symfony\Component\DependencyInjection\ContainerInterface;
 
 class ContentHierarchySettingsForm extends ConfigFormBase {
+
+  /**
+   * The entity type manager service.
+   *
+   * @var \Drupal\Core\Entity\EntityTypeManagerInterface
+   */
+  protected $entityTypeManager;
+
+  /**
+   * The entity type type bundle info service.
+   *
+   * @var \Drupal\Core\Entity\EntityTypeBundleInfoInterface
+   */
+  protected $entityTypeBundleInfo;
 
   /**
    * @var \Drupal\content_hierarchy\ContentHierarchyData
    */
   protected $contentHierarchyData;
+
+  /**
+   * @var \Drupal\content_hierarchy\ContentHierarchyData
+   */
+  protected $contentHierarchyWidgets;
+
+  /**
+   * The Messenger service.
+   *
+   * @var \Drupal\Core\Messenger\MessengerInterface
+   */
+  protected $messenger;
+
+  /**
+   * {@inheritdoc}
+   */
+  public static function create(ContainerInterface $container) {
+    return new static(
+      $container->get('config.factory'),
+      $container->get('content_hierarchy.data'),
+      $container->get('content_hierarchy.widgets'),
+      $container->get('entity_type.manager'),
+      $container->get('entity_type.bundle.info'),
+      $container->get('messenger')
+    );
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function __construct(ConfigFactoryInterface $config_factory, ContentHierarchyData $contentHierarchyData, ContentHierarchyWidgets $contentHierarchyWidgets, EntityTypeManagerInterface $entityTypeManager, EntityTypeBundleInfoInterface $entityTypeBundleInfo, MessengerInterface $messenger) {
+    parent::__construct($config_factory);
+    $this->contentHierarchyWidgets = $contentHierarchyWidgets;
+    $this->contentHierarchyData = $contentHierarchyData;
+    $this->messenger = $messenger;
+    $this->entityTypeManager = $entityTypeManager;
+    $this->entityTypeBundleInfo = $entityTypeBundleInfo;
+  }
 
   /**
    * Gets the configuration names that will be editable.
@@ -53,7 +113,7 @@ class ContentHierarchySettingsForm extends ConfigFormBase {
       '#open' => TRUE,
       '#title' => $this->t('Content Hierarchy settings'),
       '#description' => $this->t(
-        'Configure how the content hierarchy works and what nodes are included in the hierarchy lists.'
+        'Configure how the content hierarchy works and what entity bundles are included in the hierarchy lists.'
       ),
     ];
 
@@ -86,18 +146,21 @@ class ContentHierarchySettingsForm extends ConfigFormBase {
     );
 
     $bundles = $config->get('entity_bundles') ?? [];
-    $options = [];
-    foreach(NodeType::loadMultiple() as $id => $node_type) {
-      $options[$id] = $node_type->label();
-    }
+    $entity_types = $this->contentHierarchyWidgets->getSupportedEntityTypes();
+    foreach ($entity_types as $entity_type) {
+      $options = [];
+      foreach ($entity_type['bundles'] as $bundle_id => $bundle) {
+        $options[$bundle_id] = $bundle['label'];
+      }
 
-    $form['entity_bundles']['node'] = array(
-      '#type' => 'checkboxes',
-      '#title' => $this->t('Content types'),
-      '#description' => $this->t(''),
-      '#options' => $options,
-      '#default_value' => $bundles['node'] ?? []
-    );
+      $form['entity_bundles'][$entity_type['id']] = array(
+        '#type' => 'checkboxes',
+        '#title' => $entity_type['label'],
+        '#description' => $this->t(''),
+        '#options' => $options,
+        '#default_value' => $bundles[$entity_type['id']] ?? []
+      );
+    }
 
     return parent::buildform($form, $form_state);
   }
@@ -115,33 +178,39 @@ class ContentHierarchySettingsForm extends ConfigFormBase {
       $config->set('multilingual', $multilingual);
     }
 
-    $bundles = ['node' => []];
-    foreach ($form_state->getValue(['entity_bundles', 'node'], []) as $bundle) {
-      if (!empty($bundle)) {
-        $bundles['node'][] = $bundle;
+    $bundles = [];
+    $entity_types = $this->contentHierarchyWidgets->getSupportedEntityTypes();
+    foreach ($entity_types as $entity_type) {
+      $bundles[$entity_type['id']] = [];
+      foreach ($form_state->getValue(['entity_bundles', $entity_type['id']], []) as $bundle) {
+        if (!empty($bundle)) {
+          $bundles[$entity_type['id']][] = $bundle;
+        }
       }
     }
     $config->set('entity_bundles', $bundles);
 
     $config->save();
 
-    foreach ($bundles as $entity_type => $entity_bundles) {
+    foreach ($bundles as $entity_type_id => $entity_bundles) {
+      $entity_type = $this->entityTypeManager->getDefinition($entity_type_id);
+
       $existing_bundles = [];
-      foreach(NodeType::loadMultiple() as $bundle => $node_type) {
-        $existing_bundles[] = $bundle;
+      foreach ($this->entityTypeBundleInfo->getBundleInfo($entity_type_id) as $bundle_id => $bundle) {
+        $existing_bundles[] = $bundle_id;
       }
 
       if (empty($entity_bundles)) {
-        foreach ($existing_bundles as $bundle) {
-          $this->removeEntityBundle($entity_type, $bundle);
+        foreach ($existing_bundles as $bundle_id) {
+          $this->removeEntityBundle($entity_type, $bundle_id);
         }
 
-        $fieldStorage = FieldStorageConfig::loadByName($entity_type, 'content_hierarchy');
+        $fieldStorage = FieldStorageConfig::loadByName($entity_type_id, 'content_hierarchy');
         if (!empty($fieldStorage)) {
           $fieldStorage->delete();
         }
       } else {
-        $this->addFieldStorage($entity_type);
+        $this->addFieldStorage($entity_type_id);
 
         foreach ($existing_bundles as $bundle) {
           if (in_array($bundle, $entity_bundles)) {
@@ -160,19 +229,20 @@ class ContentHierarchySettingsForm extends ConfigFormBase {
   /**
    * Remove instances of an entity type or bundle from the content tree.
    *
-   * @param string $entity_type
+   * @param EntityTypeInterface $entity_type
    * @param string $bundle
    */
-  function addEntityBundle($entity_type, $bundle) {
-    $field = FieldConfig::loadByName($entity_type, $bundle, 'content_hierarchy');
+  function addEntityBundle(EntityTypeInterface $entity_type, $bundle) {
+    $field = FieldConfig::loadByName($entity_type->id(), $bundle, 'content_hierarchy');
     if (empty($field)) {
-      $this->addPlacementField($entity_type, $bundle);
+      $this->addPlacementField($entity_type->id(), $bundle);
 
       $langcodes = [];
-      $entity_ids = \Drupal::entityQuery($entity_type)
-        ->condition('type', $bundle)
+      $bundle_field = $entity_type->getKey('bundle');
+      $entity_ids = \Drupal::entityQuery($entity_type->id())
+        ->condition($bundle_field, $bundle)
         ->execute();
-      $entities = \Drupal::entityTypeManager()->getStorage($entity_type)->loadMultiple($entity_ids);
+      $entities = \Drupal::entityTypeManager()->getStorage($entity_type->id())->loadMultiple($entity_ids);
       $config = $this->config('content_hierarchy.hierarchy_settings');
       foreach ($entities as $entity) {
         $this->contentHierarchyData()->setEntityPlacement($entity, 0);
@@ -199,18 +269,19 @@ class ContentHierarchySettingsForm extends ConfigFormBase {
   /**
    * Remove instances of an entity type or bundle from the content tree.
    *
-   * @param string $entity_type
+   * @param EntityTypeInterface $entity_type
    * @param string $bundle
    */
-  function removeEntityBundle($entity_type, $bundle) {
-    $field = FieldConfig::loadByName($entity_type, $bundle, 'content_hierarchy');
+  function removeEntityBundle(EntityTypeInterface $entity_type, $bundle) {
+    $field = FieldConfig::loadByName($entity_type->id(), $bundle, 'content_hierarchy');
     if (!empty($field)) {
       $field->delete();
 
-      $entity_ids = \Drupal::entityQuery($entity_type)
-        ->condition('type', $bundle)
+      $bundle_field = $entity_type->getKey('bundle');
+      $entity_ids = \Drupal::entityQuery($entity_type->id())
+        ->condition($bundle_field, $bundle)
         ->execute();
-      $content_ids = $this->contentHierarchyData()->findEntityIds($entity_type, $entity_ids);
+      $content_ids = $this->contentHierarchyData()->findEntityIds($entity_type->id(), $entity_ids);
       $this->contentHierarchyData()->deleteMultiple($content_ids);
       $tags = [];
       foreach (\Drupal::languageManager()->getLanguages() as $language) {
@@ -241,19 +312,27 @@ class ContentHierarchySettingsForm extends ConfigFormBase {
     return $fieldStorage;
   }
 
-  function addPlacementField($entity_type, $bundle) {
+  /**
+   * @param string $entity_type_id
+   * @param string $bundle
+   *
+   * @throws \Drupal\Component\Plugin\Exception\InvalidPluginDefinitionException
+   * @throws \Drupal\Component\Plugin\Exception\PluginNotFoundException
+   * @throws \Drupal\Core\Entity\EntityStorageException
+   */
+  function addPlacementField($entity_type_id, $bundle) {
     $entityTypemanager = \Drupal::entityTypeManager();
 
     // Add or remove the body field, as needed.
-    $field_storage = $this->addFieldStorage($entity_type);
+    $field_storage = $this->addFieldStorage($entity_type_id);
 
-    $field = FieldConfig::loadByName($entity_type, $bundle, 'content_hierarchy');
+    $field = FieldConfig::loadByName($entity_type_id, $bundle, 'content_hierarchy');
     if (empty($field)) {
       $field = FieldConfig::create([
         'field_storage' => $field_storage,
         'field_name' => 'content_hierarchy',
         'langcode' => \Drupal::languageManager()->getDefaultLanguage()->getId(),
-        'entity_type' => $entity_type,
+        'entity_type' => $entity_type_id,
         'bundle' => $bundle,
         'translatable' => TRUE,
         'label' => $this->t('Content Hierarchy', [], ['langcode' => \Drupal::languageManager()->getDefaultLanguage()->getId()])
@@ -263,29 +342,33 @@ class ContentHierarchySettingsForm extends ConfigFormBase {
       // Assign widget settings for the 'default' form mode.
       $displayForm = $entityTypemanager
         ->getStorage('entity_form_display')
-        ->load($entity_type . '.' . $bundle . '.default')
-        ->setComponent('content_hierarchy', [
+        ->load($entity_type_id . '.' . $bundle . '.default');
+      if ($displayForm) {
+        $displayForm->setComponent('content_hierarchy', [
           'type' => 'content_hierarchy_select'
         ]);
-      $displayForm->save();
+        $displayForm->save();
+      }
       unset($displayForm);
 
       // Assign display settings for the 'default' and 'teaser' view modes.
       $displayDefault = $entityTypemanager
         ->getStorage('entity_view_display')
-        ->load($entity_type . '.' . $bundle . '.default')
-        ->removeComponent('content_hierarchy');
-      $displayDefault->save();
+        ->load($entity_type_id . '.' . $bundle . '.default');
+      if ($displayDefault) {
+        $displayDefault->removeComponent('content_hierarchy');
+        $displayDefault->save();
+      }
       unset($displayDefault);
 
       // The teaser view mode is created by the Standard profile and therefore
       // might not exist.
       $viewModes = \Drupal::service('entity_display.repository')
-        ->getViewModes($entity_type);
+        ->getViewModes($entity_type_id);
       if (isset($viewModes['teaser'])) {
         $displayTeaser = $entityTypemanager
           ->getStorage('entity_view_display')
-          ->load($entity_type . '.' . $bundle . '.teaser');
+          ->load($entity_type_id . '.' . $bundle . '.teaser');
         if (!empty($displayTeaser)) {
           $displayTeaser->removeComponent('content_hierarchy');
           $displayTeaser->save();

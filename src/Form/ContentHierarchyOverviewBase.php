@@ -5,6 +5,7 @@ namespace Drupal\content_hierarchy\Form;
 use Drupal\content_hierarchy\ContentHierarchy;
 use Drupal\content_hierarchy\ContentHierarchyData;
 use Drupal\content_hierarchy\ContentHierarchyStorage;
+use Drupal\content_hierarchy\ContentHierarchyWidgets;
 use Drupal\Core\Datetime\DateFormatter;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Form\FormBase;
@@ -21,22 +22,27 @@ abstract class ContentHierarchyOverviewBase extends FormBase {
   /**
    * @var \Drupal\Core\Entity\EntityTypeManagerInterface
    */
-  private $entityTypeManager;
+  protected $entityTypeManager;
 
   /**
    * @var \Drupal\Core\Language\LanguageManagerInterface
    */
-  private $languageManager;
+  protected $languageManager;
 
   /**
    * @var \Drupal\content_hierarchy\ContentHierarchyStorage
    */
-  private $contentHierarchyStorage;
+  protected $contentHierarchyStorage;
 
   /**
    * @var \Drupal\content_hierarchy\ContentHierarchyData
    */
-  private $contentHierarchyData;
+  protected $contentHierarchyData;
+
+  /**
+   * @var \Drupal\content_hierarchy\ContentHierarchyWidgets
+   */
+  protected $contentHierarchyWidgets;
 
   /**
    * The renderer service.
@@ -67,9 +73,11 @@ abstract class ContentHierarchyOverviewBase extends FormBase {
    * @param \Drupal\Core\Render\RendererInterface $renderer
    * @param \Drupal\Core\Datetime\DateFormatter $dateFormatter
    */
-  public function __construct(LanguageManagerInterface $languageManager, ContentHierarchyStorage $contentHierarchyStorage, RendererInterface $renderer, DateFormatter $dateFormatter, EntityTypeManagerInterface $entityTypeManager, PagerManagerInterface $pagerManager) {
+  public function __construct(LanguageManagerInterface $languageManager, ContentHierarchyStorage $contentHierarchyStorage, ContentHierarchyData $contentHierarchyData, ContentHierarchyWidgets $contentHierarchyWidgets, RendererInterface $renderer, DateFormatter $dateFormatter, EntityTypeManagerInterface $entityTypeManager, PagerManagerInterface $pagerManager) {
     $this->languageManager = $languageManager;
     $this->contentHierarchyStorage = $contentHierarchyStorage;
+    $this->contentHierarchyData = $contentHierarchyData;
+    $this->contentHierarchyWidgets = $contentHierarchyWidgets;
     $this->renderer = $renderer;
     $this->dateFormatter = $dateFormatter;
     $this->entityTypeManager = $entityTypeManager;
@@ -83,6 +91,8 @@ abstract class ContentHierarchyOverviewBase extends FormBase {
     return new static(
       $container->get('language_manager'),
       $container->get('content_hierarchy.storage'),
+      $container->get('content_hierarchy.data'),
+      $container->get('content_hierarchy.widgets'),
       $container->get('renderer'),
       $container->get('date.formatter'),
       $container->get('entity_type.manager'),
@@ -146,7 +156,7 @@ abstract class ContentHierarchyOverviewBase extends FormBase {
     }
 
     $form['#cache'] = [
-      'tags' => $this->getContentHierarchyStorage()->getListCacheTags($langcode)
+      'tags' => $this->contentHierarchyStorage->getListCacheTags($langcode)
     ];
 
     return $form;
@@ -184,25 +194,27 @@ abstract class ContentHierarchyOverviewBase extends FormBase {
   protected function getTypeLabel($content) {
     if (is_array($content)) {
       if ($content['source'] == 'entity') {
-        return $this->getEntityTypeManager()
-          ->getStorage($content['entity_type'] . '_type')
-          ->load($content['entity_bundle'])
-          ->label();
+        return $this->getEntityTypeLabel($content['entity_type'], $content['entity_bundle']);
       } else {
         return $this->t($content['type']);
       }
     }
     else {
       if ($content->getSource() == 'entity') {
-        return $this->getEntityTypeManager()
-          ->getStorage($content->getEntityType() . '_type')
-          ->load($content->getEntityBundle())
-          ->label();
+        return $this->getEntityTypeLabel($content->getEntityType(), $content->getEntityBundle());
       }
-    else {
-      return $this->t($content->getType());
+      else {
+        return $this->t($content->getType());
+      }
     }
   }
+
+  protected function getEntityTypeLabel($entity_type, $entity_bundle) {
+    static $types = [];
+    if (empty($types)) {
+      $types = $this->contentHierarchyWidgets->getSupportedEntityTypes();
+    }
+    return $types[$entity_type]['bundles'][$entity_bundle]['label'];
   }
 
   protected function getLangCode() {
@@ -239,42 +251,6 @@ abstract class ContentHierarchyOverviewBase extends FormBase {
       $this->renderer = \Drupal::service('renderer');
     }
     return $this->renderer;
-  }
-
-  /**
-   * @return EntityTypeManagerInterface
-   */
-  protected function getEntityTypeManager() {
-    if (!$this->entityTypeManager) {
-      $this->entityTypeManager = \Drupal::service('entity_type.manager');
-    }
-    return $this->entityTypeManager;
-  }
-
-  /**
-   * Gets the content hierarchy storage.
-   *
-   * @return ContentHierarchyStorage
-   *   The content hierarchy storage.
-   */
-  protected function getContentHierarchyStorage() {
-    if (!$this->contentHierarchyStorage) {
-      $this->contentHierarchyStorage = \Drupal::service('content_hierarchy.storage');
-    }
-    return $this->contentHierarchyStorage;
-  }
-
-  /**
-   * Gets the content hierarchy data service.
-   *
-   * @return ContentHierarchyData
-   *   The content hierarchy data service.
-   */
-  protected function getContentHierarchyData() {
-    if (!$this->contentHierarchyData) {
-      $this->contentHierarchyData = \Drupal::service('content_hierarchy.data');
-    }
-    return $this->contentHierarchyData;
   }
 
   /**

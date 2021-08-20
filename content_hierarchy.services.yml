@@ -9,7 +9,7 @@ services:
 
   content_hierarchy.widgets:
     class: Drupal\content_hierarchy\ContentHierarchyWidgets
-    arguments: ['@content_hierarchy.storage', '@content_hierarchy.data']
+    arguments: ['@content_hierarchy.storage', '@entity_type.manager', '@entity_type.bundle.info', '@content_hierarchy.data']
 
   cache.content_hierarchy:
     class: Drupal\Core\Cache\CacheBackendInterface
