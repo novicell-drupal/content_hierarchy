@@ -28,3 +28,39 @@ content_hierarchy.select:
     _controller: '\Drupal\content_hierarchy\Controller\ContentHierarchyController::contentHierarchySelect'
   requirements:
     _permission: 'access content overview'
+
+content_hierarchy.modal.form:
+  path: '/admin/content/hierarchy/ajax/modal/form'
+  defaults:
+    _form: '\Drupal\content_hierarchy\Form\ContentHierarchyModalForm'
+    _title: 'Choose placement'
+  requirements:
+    _permission: 'access content overview'
+
+content_hierarchy.modal.update:
+  path: '/admin/content/hierarchy/ajax/modal/update/{langcode}/{content_id}'
+  defaults:
+    _controller: '\Drupal\content_hierarchy\Controller\ContentHierarchyController::contentHierarchyModalUpdate'
+  requirements:
+    _permission: 'access content overview'
+
+content_hierarchy.modal.open:
+  path: '/admin/content/hierarchy/ajax/modal/open/{id}/{langcode}/{content_id}'
+  defaults:
+    _controller: '\Drupal\content_hierarchy\Controller\ContentHierarchyController::contentHierarchyModalOpen'
+  requirements:
+    _permission: 'access content overview'
+
+content_hierarchy.modal.close:
+  path: '/admin/content/hierarchy/ajax/modal/close/{id}/{langcode}/{content_id}'
+  defaults:
+    _controller: '\Drupal\content_hierarchy\Controller\ContentHierarchyController::contentHierarchyModalClose'
+  requirements:
+    _permission: 'access content overview'
+
+content_hierarchy.modal.select:
+  path: '/admin/content/hierarchy/ajax/modal/select/{id}/{langcode}/{content_id}'
+  defaults:
+    _controller: '\Drupal\content_hierarchy\Controller\ContentHierarchyController::contentHierarchyModalSelect'
+  requirements:
+    _permission: 'access content overview'

@@ -1,10 +1,14 @@
 <?php
 namespace Drupal\content_hierarchy;
 
+use Drupal\Component\Serialization\Json;
 use Drupal\Core\Entity\EntityTypeBundleInfoInterface;
 use Drupal\Core\Entity\EntityTypeInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
+use Drupal\Core\Link;
+use Drupal\Core\Render\RendererInterface;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
+use Drupal\Core\Url;
 
 class ContentHierarchyWidgets {
 
@@ -38,32 +42,17 @@ class ContentHierarchyWidgets {
    */
   protected $entityTypeBundleInfo;
 
-  public function __construct(ContentHierarchyStorage $storage, EntityTypeManagerInterface $entityTypeManager, EntityTypeBundleInfoInterface $entityTypeBundleInfo, ContentHierarchyData $data) {
+  /**
+   * @var \Drupal\Core\Render\RendererInterface
+   */
+  protected $renderer;
+
+  public function __construct(ContentHierarchyStorage $storage, EntityTypeManagerInterface $entityTypeManager, EntityTypeBundleInfoInterface $entityTypeBundleInfo, ContentHierarchyData $data, RendererInterface $renderer) {
     $this->storage = $storage;
     $this->data = $data;
     $this->entityTypeManager = $entityTypeManager;
     $this->entityTypeBundleInfo = $entityTypeBundleInfo;
-  }
-
-  /**
-   * @param $level
-   * @param ContentHierarchy[] $items
-   *
-   * @return array|mixed
-   */
-  protected function generateHierarchyTree($level, array $items, array $excluded = []) {
-    $options = [];
-    $prefix = str_repeat('--', $level);
-    foreach ($items as $item) {
-      if (in_array($item->id(), $excluded)) {
-        continue;
-      }
-      $options[$item->id()] = $prefix . $item->label();
-      if (!empty($item->getChildren())) {
-        $options += $this->generateHierarchyTree($level + 1, $item->getChildren(), $excluded);
-      }
-    }
-    return $options;
+    $this->renderer = $renderer;
   }
 
   /**
@@ -85,30 +74,88 @@ class ContentHierarchyWidgets {
   }
 
   /**
-   * @param \Drupal\content_hierarchy\ContentHierarchy $content
+   * @param int $placement
+   * @param string|null $langcode
    *
    * @return \Drupal\Core\StringTranslation\TranslatableMarkup|string
    */
-  public function placementToText(ContentHierarchy $content) {
-    $placement = $content->getPlacement();
+  public function placementToText($placement, $langcode = NULL) {
     switch ($placement) {
       case -1:
-        return $this->t('Exclude');
+        return $this->t('Excluded');
       case 0:
         return $this->t('Root');
       default:
+        $content = $this->storage->load($placement, $langcode);
         $ancestors = $this->storage->findAncestors($content);
         $ancestors[$content->id()] = $content;
         $result = '';
         foreach ($ancestors as $ancestor) {
           if (!empty($result)) {
-            $result .= ' -> ';
+            $result .= ' / ';
           }
           $result .= $ancestor->label();
         }
         return $result;
-        break;
     }
+  }
+
+  /**
+   * @param int $placement
+   * @param string|null $langcode
+   *
+   * @return array
+   */
+  public function buildPlacement($placement, $langcode = NULL) {
+    switch ($placement) {
+      case -1:
+        return ['#markup' => '<i>' . $this->t('Excluded') . '</i>'];
+      case 0:
+        return ['#markup' => '<i>' . $this->t('Root') . '</i>'];
+      default:
+        $content = $this->storage->load($placement, $langcode);
+        $ancestors = $this->storage->findAncestors($content);
+        $ancestors[$content->id()] = $content;
+        $result = [];
+        foreach ($ancestors as $ancestor) {
+          if (!empty($result)) {
+            $result[] = ['#markup' => ' / '];
+          }
+          $result[] = Link::fromTextAndUrl($ancestor->label(), $ancestor->getUrl())->toRenderable();
+        }
+        return $result;
+    }
+  }
+
+  /**
+   * @param string $langcode
+   * @param int|null $content_id
+   *
+   * @return \Drupal\content_hierarchy\ContentHierarchy[]
+   */
+  protected function getValidPlacementOptions($langcode, $content_id = NULL) {
+    static $options = [];
+    if (!isset($options[$langcode])) {
+      $options[$langcode] = [];
+    }
+
+    if (!isset($options[$langcode][$content_id ?? 0])) {
+      $items = [];
+      $excluded = [];
+      if (!empty($content_id)) {
+        $excluded = $this->data->getChildrenOf($content_id, $langcode);
+        $excluded[] = $content_id;
+      }
+      foreach ($this->storage->getListWithDepth($langcode) as $item) {
+        if (in_array($item->id(), $excluded)) {
+          continue;
+        }
+        $items[$item->id()] = $item;
+      }
+      $options[$langcode][$content_id ?? 0] = $items;
+    }
+
+    return $options[$langcode][$content_id ?? 0];
   }
 
   /**
@@ -135,18 +182,15 @@ class ContentHierarchyWidgets {
     ];
 
     $placement = -1;
-    $excluded = [];
     if (!is_null($content_id)) {
       $content = $this->storage->load($content_id, $langcode);
       $placement = $content->getPlacement();
-      $excluded = $this->data->getChildrenOf($content_id, $langcode);
-      $excluded[] = $content_id;
     }
-    foreach ($this->generateHierarchyTree(0, $this->storage->getTree($langcode), $excluded) as $key => $value) {
+    foreach ($this->getValidPlacementOptions($langcode, $content_id) as $key => $item) {
       $items[intval($key)] = [
         'key' => $key,
-        'value' => $value,
-        'prefix' => '',
+        'value' => $item->label(),
+        'prefix' => str_repeat('--', $item->getDepth()),
         'suffix' => '',
         'selected' => ''
       ];
@@ -156,6 +200,93 @@ class ContentHierarchyWidgets {
     }
 
     return $items;
+  }
+
+  /**
+   * @param string $langcode
+   * @param int|null $content_id
+   * @param int $value
+   *
+   * @return array
+   */
+  public function buildModalWidget($langcode, $content_id = NULL, $placement = -1) {
+    $element = [
+      '#type' => 'container',
+      '#attributes' => [
+        'class' => ['content-hierarchy-modal__widget'],
+        'data-content-id' => $content_id ?? 0
+      ]
+    ];
+
+    $element['placement'] = [
+      '#type' => 'item',
+      '#title' => $this->t('Placement'),
+    ];
+    $element['placement'][] = $this->buildPlacement($placement, $langcode);
+    $element['placement']['change'] = [
+      '#title' => $this->t('Change'),
+      '#type' => 'link',
+      '#url' => Url::fromRoute('content_hierarchy.modal.form', [], ['query' => ['langcode' => $langcode, 'content_id' => $content_id ?? 0]]),
+      '#attributes' => [
+        'class' => ['use-ajax', 'button', 'button--small', 'add'],
+        'data-dialog-type' => 'modal',
+        'data-dialog-options' => Json::encode([
+          'width' => 700,
+        ]),
+      ],
+    ];
+
+    return $element;
+  }
+
+  /**
+   * @param \Drupal\content_hierarchy\ContentHierarchy $content
+   * @param string $wrapper
+   * @param string $langcode
+   * @param string|null $content_id
+   * @param bool $includeChildren
+   *
+   * @return array
+   */
+  public function buildModalItem(ContentHierarchy $content, $langcode, $content_id = NULL, $includeChildren = FALSE) {
+    $build = [
+      '#theme' => 'content_hierarchy_modal_item',
+      '#id' => $content->id(),
+      '#content_id' => $content_id,
+      '#langcode' => $langcode,
+      '#content' => $content,
+      '#children' => []
+    ];
+    if ($includeChildren) {
+      $items = $this->getValidPlacementOptions($langcode, $content_id);
+      foreach ($items as $key => $item) {
+        if ($item->getParentId() == $content->id()) {
+          $build['#children'][$key] = $this->buildModalItem($item, $langcode, $content_id);
+        }
+      }
+      if (!empty($build['#children'])) {
+        $build['#children'] = $this->renderer->renderPlain($build['#children']);
+      }
+    }
+    return $build;
+  }
+
+  /**
+   * @param string|null $langcode
+   * @param int|null $content_id
+   *
+   * @return array
+   */
+  public function getInitialModalItems($langcode, $content_id = NULL) {
+    $items = $this->getValidPlacementOptions($langcode, $content_id);
+    $build = [];
+    foreach ($items as $item) {
+      if ($item->getDepth() > 0) {
+        continue;
+      }
+      $build[$item->id()] = $this->buildModalItem($item, $langcode, $content_id, TRUE);
+    }
+    return $build;
   }
 
   /**

@@ -8,3 +8,13 @@ contentHierarchySelect:
   version: VERSION
   js:
     js/contentHierarchySelect.js: {}
+  dependencies:
+    - core/jquery
+
+contentHierarchyModal:
+  version: VERSION
+  js:
+    js/contentHierarchyModal.js: {}
+  dependencies:
+    - core/jquery #Just to be safe
+    - core/drupal.dialog.ajax #Required for dialogs

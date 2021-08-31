@@ -66,6 +66,9 @@ msgstr "Indholdshierarki mønster"
 msgid "Placement: @placement"
 msgstr "Placering: @placement"
 
+msgid "Current placement"
+msgstr "Nuværende placering"
+
 msgid "Content hierarchy for @language"
 msgstr "Indholdstræ for @language"
 
@@ -92,3 +95,30 @@ msgstr "Hav forskellige indholdstræer for hvert sprog."
 
 msgid "Weight for content"
 msgstr "Vægt for indhold"
+
+msgid "Content Hierarchy select"
+msgstr "Indholdshierarki valgliste"
+
+msgid "A select field sorted by hierarchy tree."
+msgstr "En valgliste sorteret efter indholdstræet."
+
+msgid "Content Hierarchy modal"
+msgstr "Indholdshierarki modal"
+
+msgid "A widget that opens a modal to select an item in the tree."
+msgstr "En widget der åbner en modal til at vælge et punkt i træet."
+
+msgid "Make root"
+msgstr "Gør til rod"
+
+msgid "Exclude"
+msgstr "Ekskludér"
+
+msgid "Excluded"
+msgstr "Ekskluderet"
+
+msgid "Placement"
+msgstr "Placering"
+
+msgid "Choose placement"
+msgstr "Vælg placering"

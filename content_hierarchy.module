@@ -5,10 +5,9 @@
  * Contains merc_content_hierarchy.module.
  */
 
-use Drupal\content_hierarchy\ContentHierarchyUtils;
 use Drupal\Core\Cache\Cache;
-use Drupal\Core\Entity\ContentEntityInterface;
 use Drupal\Core\Routing\RouteMatchInterface;
+use Drupal\Core\Url;
 
 /**
  * Implements hook_help().
@@ -40,19 +39,28 @@ function content_hierarchy_locale_translation_projects_alter(&$projects) {
  */
 function content_hierarchy_theme() {
   return [
-    'content_options' => [
+    'content_hierarchy_options' => [
       'variables' => [
         'langcode' => NULL,
         'content_id' => NULL
       ],
     ],
+    'content_hierarchy_modal_item' => [
+      'variables' => [
+        'id' => NULL,
+        'langcode' => NULL,
+        'content_id' => NULL,
+        'content' => NULL,
+        'children' => NULL
+      ]
+    ]
   ];
 }
 
 /**
  * Implements hook_preprocess().
  */
-function content_hierarchy_preprocess_content_options(&$variables, $hook) {
+function content_hierarchy_preprocess_content_hierarchy_options(&$variables) {
   $langcode = $variables['langcode'];
   $content_id = $variables['content_id'] ?? NULL;
   /** @var \Drupal\content_hierarchy\ContentHierarchyWidgets $widgets */
@@ -63,6 +71,64 @@ function content_hierarchy_preprocess_content_options(&$variables, $hook) {
   $variables['#cache'] = [
     'tags' => $storage->getListCacheTags($langcode)
   ];
+}
+
+/**
+ * Implements hook_preprocess().
+ */
+function content_hierarchy_preprocess_content_hierarchy_modal_item(&$variables) {
+  $id = $variables['id'];
+  $langcode = $variables['langcode'] ?? \Drupal::languageManager()->getDefaultLanguage()->getId();
+  $content_id = $variables['content_id'];
+  /** @var \Drupal\content_hierarchy\ContentHierarchyWidgets $widgets */
+  $widgets = \Drupal::service('content_hierarchy.widgets');
+  /** @var \Drupal\content_hierarchy\ContentHierarchyStorage $storage */
+  $storage = \Drupal::service('content_hierarchy.storage');
+  if (!empty($variables['content'])) {
+    $content = $variables['content'];
+  } else {
+    $content = $storage->load($id, $langcode);
+  }
+  $variables['attributes']['id'] = 'hierarchy-' . $content->id();
+  $variables['attributes']['class'][] = 'hierarchy-item';
+
+  $variables['item'] = [
+    '#title' => $content->label(),
+    '#type' => 'link',
+    '#url' => Url::fromRoute('content_hierarchy.modal.select', [
+      'id' => $content->id(),
+      'langcode' => $langcode,
+      'content_id' => $content_id ?? 0
+    ]),
+    '#attributes' => [
+      'class' => ['use-ajax'],
+    ],
+  ];
+
+  $children = $content->getChildren();
+  if (empty($children)) {
+  } else {
+    if (empty($variables['children'])) {
+      $title = '( + )';
+      $route_name = 'content_hierarchy.modal.open';
+    } else {
+      $title = '( - )';
+      $route_name = 'content_hierarchy.modal.close';
+    }
+    $variables['fold_button'] = [
+      '#title' => $title,
+      '#type' => 'link',
+      '#url' => Url::fromRoute($route_name, [
+        'id' => $content->id(),
+        'langcode' => $langcode,
+        'content_id' => $content_id ?? 0
+      ]),
+      '#attributes' => [
+        'class' => ['use-ajax', 'button', 'button--small', 'toggle-item-button'],
+      ],
+    ];
+  }
+  $variables['#cache'] = ['max-age' => 0];
 }
 
 /**

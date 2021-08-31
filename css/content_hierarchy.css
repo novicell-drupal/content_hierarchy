@@ -19,7 +19,7 @@
   background-image: url(/modules/contrib/adminimal_admin_toolbar/images/ffffff/file.svg);
 }
 
-input.button.toggle-item-button {
+.button.toggle-item-button {
   padding: 0;
   border: 0;
   background: transparent;
@@ -27,4 +27,8 @@ input.button.toggle-item-button {
   font-weight: bold;
   text-decoration: none;
   color: #000;
+}
+
+.hierarchy-item .hierarchy-children {
+  padding-left: 20px;
 }

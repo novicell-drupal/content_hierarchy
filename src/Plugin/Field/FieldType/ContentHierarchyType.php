@@ -18,7 +18,7 @@ use Drupal\Core\TypedData\TypedDataInterface;
  *   label = @Translation("Content Hierarchy"),
  *   description = @Translation("Entity placement in the Content Hierarchy."),
  *   category = @Translation("Content Hierarchy"),
- *   default_widget = "content_hierarchy_select",
+ *   default_widget = "content_hierarchy_modal",
  *   default_formatter = "integer"
  * )
  */

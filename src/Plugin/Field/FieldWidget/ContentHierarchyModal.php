@@ -2,34 +2,32 @@
 
 namespace Drupal\content_hierarchy\Plugin\Field\FieldWidget;
 
-use Drupal\content_hierarchy\ContentHierarchy;
+use Drupal\Component\Serialization\Json;
+use Drupal\Component\Utility\Html;
 use Drupal\content_hierarchy\ContentHierarchyData;
 use Drupal\content_hierarchy\ContentHierarchyStorage;
 use Drupal\content_hierarchy\ContentHierarchyWidgets;
-use Drupal\Core\Database\Connection;
-use Drupal\Core\Entity\FieldableEntityInterface;
 use Drupal\Core\Field\FieldDefinitionInterface;
 use Drupal\Core\Field\FieldItemListInterface;
 use Drupal\Core\Field\WidgetBase;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Plugin\ContainerFactoryPluginInterface;
-use Drupal\Core\Routing\CurrentRouteMatch;
-use Drupal\Core\Session\AccountProxyInterface;
+use Drupal\Core\Url;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
- * Select widget.
+ * Modal widget.
  *
  * @FieldWidget(
- *   id = "content_hierarchy_select",
- *   label = @Translation("Content Hierarchy select"),
- *   description = @Translation("A select field sorted by hierarchy tree."),
+ *   id = "content_hierarchy_modal",
+ *   label = @Translation("Content Hierarchy modal"),
+ *   description = @Translation("A widget that opens a modal to select an item in the tree."),
  *   field_types = {
  *     "content_hierarchy"
  *   }
  * )
  */
-class ContentHierarchySelect extends WidgetBase implements ContainerFactoryPluginInterface {
+class ContentHierarchyModal extends WidgetBase implements ContainerFactoryPluginInterface {
 
   /**
    * Content Hierarchy data service
@@ -98,70 +96,47 @@ class ContentHierarchySelect extends WidgetBase implements ContainerFactoryPlugi
     );
   }
 
+  /**
+   * {@inheritdoc}
+   */
   public function formElement(FieldItemListInterface $items, $delta, array $element, array &$form, FormStateInterface $form_state) {
     $entity = $items->getEntity();
     $placement = isset($items[$delta]->value) ? $items[$delta]->value : -1;
-    $content_id = NULL;
 
     if(!$entity->isNew()) {
       $langcode = $entity->language()->getId();
       $content_id = $this->data->findEntity($entity);
       $placement = $this->data->getContentPlacement($content_id, $langcode);
     } else {
-      $langcode = 'und';
+      $langcode = \Drupal::languageManager()->getDefaultLanguage()->getId();
+      $content_id = NULL;
     }
 
     $element += [
       '#type' => 'details',
       '#open' => $entity->isNew(),
-      'settings' => []
+      '#attributes' => ['class' => ['content-hierarchy-modal']]
     ];
 
     // Put the form element into the form's "advanced" group.
     $element['#group'] = 'advanced';
 
-    if ($entity->isNew() || $placement === NULL || $placement > -2) {
-      $element += [
-        '#attached' => [
-          'library' => [
-            'content_hierarchy/contentHierarchySelect',
-          ],
+    $element['widget']= $this->widgets->buildModalWidget($langcode, $content_id, $placement);
+
+    $element['new_parent'] = [
+      '#type' => 'hidden',
+      '#default_value' => $placement,
+    ];
+
+    $element += [
+      '#attached' => [
+        'library' => [
+          'content_hierarchy/contentHierarchyModal',
         ],
-      ];
-      $element['new_parent'] = [
-        '#attributes' => ['class' => ['content-hierarchy-select']],
-        '#type' => 'select',
-        '#default_value' => $placement,
-        '#options' => $this->widgets->getAllOptions($langcode),
-        '#element_validate' => [
-          [$this, 'validate'],
-        ],
-      ];
-      $element['current_parent'] = array(
-        '#attributes' => ['class' => ['content-hierarchy-current']],
-        '#type' => 'hidden',
-        '#default_value' => json_encode([
-          'langcode' => $langcode,
-          'content_id' => $content_id,
-        ])
-      );
-    } else {
-      $content = $this->storage->load($content_id, $langcode);
-      $element['description'] = [
-        '#type' => 'item',
-        '#title' => $this->t('Placement: @placement', ['@placement' => $this->widgets->placementToText($content->getPlacement(), $langcode)]),
-        '#description' => $this->t('Can be changed in the content overview page')
-      ];
-    }
+      ],
+    ];
 
     return $element;
-  }
-
-  /**
-   * Validate the color text field.
-   */
-  public function validate($element, FormStateInterface $form_state) {
-    // TODO: Validate if a position creates endless loops
   }
 
 }
