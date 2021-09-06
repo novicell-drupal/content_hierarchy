@@ -225,6 +225,7 @@ class ContentHierarchyStorage {
 
 
           $contents[$cid]['title'] = $entity->label();
+          $contents[$cid]['langcode'] = $entity->language()->getId();
           $contents[$cid]['entity_id'] = $entity->id();
           if ($entity->hasField('changed') && !$entity->get('changed')->isEmpty()) {
             $contents[$cid]['changed'] = $entity->get('changed')->first()->getValue()['value'] ?? NULL;
