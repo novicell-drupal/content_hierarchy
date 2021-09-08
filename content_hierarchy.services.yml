@@ -1,7 +1,7 @@
 services:
   content_hierarchy.data:
     class: Drupal\content_hierarchy\ContentHierarchyData
-    arguments: ['@database', '@cache.content_hierarchy', '@language_manager']
+    arguments: ['@database', '@cache.content_hierarchy', '@language_manager', '@module_handler']
 
   content_hierarchy.storage:
     class: Drupal\content_hierarchy\ContentHierarchyStorage

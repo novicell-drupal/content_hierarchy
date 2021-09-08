@@ -5,6 +5,7 @@ use Drupal\Core\Cache\Cache;
 use Drupal\Core\Cache\CacheBackendInterface;
 use Drupal\Core\Database\Connection;
 use Drupal\Core\Entity\EntityInterface;
+use Drupal\Core\Extension\ModuleHandlerInterface;
 use Drupal\Core\Language\LanguageInterface;
 use Drupal\Core\Language\LanguageManagerInterface;
 use PDO;
@@ -26,10 +27,18 @@ class ContentHierarchyData {
    */
   protected $languageManager;
 
-  public function __construct(Connection $database, CacheBackendInterface $cache, LanguageManagerInterface $languageManager) {
+  /**
+   * The module handler
+   *
+   * @var ModuleHandlerInterface
+   */
+  protected $moduleHandler;
+
+  public function __construct(Connection $database, CacheBackendInterface $cache, LanguageManagerInterface $languageManager, ModuleHandlerInterface $moduleHandler) {
     $this->database = $database;
     $this->cache = $cache;
     $this->languageManager = $languageManager;
+    $this->moduleHandler = $moduleHandler;
   }
 
   /**
@@ -433,11 +442,9 @@ class ContentHierarchyData {
         ->execute();
     }
     if (is_null($current)) {
-      \Drupal::moduleHandler()
-        ->invokeAll('content_hierarchy_insert', [$content_id, $langcode]);
+      $this->moduleHandler->invokeAll('content_hierarchy_insert', [$content_id, $langcode]);
     } else {
-      \Drupal::moduleHandler()
-        ->invokeAll('content_hierarchy_update', [$content_id, $langcode]);
+      $this->moduleHandler->invokeAll('content_hierarchy_update', [$content_id, $langcode]);
     }
   }
 
@@ -557,7 +564,7 @@ class ContentHierarchyData {
       ->condition('langcode', $langcode, '<>')
       ->execute();
     $tags = [];
-    foreach (\Drupal::languageManager()->getLanguages() as $language) {
+    foreach ($this->languageManager->getLanguages() as $language) {
       $tags[] = 'content_hierarchy_list:' . $language->getId();
     }
     Cache::invalidateTags($tags);
