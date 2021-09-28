@@ -307,6 +307,7 @@ class ContentHierarchyData {
     }
     return $content;
   }
+
   /**
    * @param EntityInterface $entity
    * @param int $placement

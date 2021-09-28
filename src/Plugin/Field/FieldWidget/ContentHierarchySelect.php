@@ -158,9 +158,11 @@ class ContentHierarchySelect extends WidgetBase implements ContainerFactoryPlugi
   }
 
   /**
-   * Validate the color text field.
+   * Validate the content hierarchy field.
    */
   public function validate($element, FormStateInterface $form_state) {
+    dpm($element);
+    dpm($form_state->getValues());
     // TODO: Validate if a position creates endless loops
   }
 

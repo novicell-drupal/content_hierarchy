@@ -345,7 +345,7 @@ class ContentHierarchySettingsForm extends ConfigFormBase {
         ->load($entity_type_id . '.' . $bundle . '.default');
       if ($displayForm) {
         $displayForm->setComponent('content_hierarchy', [
-          'type' => 'content_hierarchy_select'
+          'type' => 'content_hierarchy_modal'
         ]);
         $displayForm->save();
       }

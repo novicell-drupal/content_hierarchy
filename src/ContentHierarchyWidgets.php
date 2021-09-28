@@ -66,8 +66,9 @@ class ContentHierarchyWidgets {
   public function getAllOptions($langcode = NULL) {
     $options = [-1 => ' - ' . $this->t('Exclude') . ' - '];
     $options += [0 => ' - ' . $this->t('Root') . ' - '];
-    foreach ($this->storage->getListWithDepth($langcode) as $item) {
-      $options[$item->id()] = str_repeat('--', $item->getDepth()) . $item->getTitle();
+    // Need to add all possible content IDs so that core will allow the values.
+    foreach ($this->data->getAllContentIDs() as $contentID) {
+      $options[$contentID] = ' ';
     }
 
     return $options;
@@ -160,7 +161,7 @@ class ContentHierarchyWidgets {
 
   /**
    * @param string|null $langcode
-   * @param int $placement
+   * @param int|null $content_id
    *
    * @return array
    */
