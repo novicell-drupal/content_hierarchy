@@ -64,8 +64,8 @@ class ContentHierarchyWidgets {
    *   The array of options for the widget.
    */
   public function getAllOptions($langcode = NULL) {
-    $options = [-1 => ' - ' . $this->t('Exclude') . ' - '];
-    $options += [0 => ' - ' . $this->t('Root') . ' - '];
+    $options = [-1 => ' - ' . $this->t('Exclude', [], ['context' => 'content_hierarchy']) . ' - '];
+    $options += [0 => ' - ' . $this->t('Root', [], ['context' => 'content_hierarchy']) . ' - '];
     // Need to add all possible content IDs so that core will allow the values.
     foreach ($this->data->getAllContentIDs() as $contentID) {
       $options[$contentID] = ' ';
@@ -83,9 +83,9 @@ class ContentHierarchyWidgets {
   public function placementToText($placement, $langcode = NULL) {
     switch ($placement) {
       case -1:
-        return $this->t('Excluded');
+        return $this->t('Excluded', [], ['context' => 'content_hierarchy']);
       case 0:
-        return $this->t('Root');
+        return $this->t('Root', [], ['context' => 'content_hierarchy']);
       default:
         $content = $this->storage->load($placement, $langcode);
         $ancestors = $this->storage->findAncestors($content);
@@ -110,9 +110,9 @@ class ContentHierarchyWidgets {
   public function buildPlacement($placement, $langcode = NULL) {
     switch ($placement) {
       case -1:
-        return ['#markup' => '<i>' . $this->t('Excluded') . '</i>'];
+        return ['#markup' => '<i>' . $this->t('Excluded', [], ['context' => 'content_hierarchy']) . '</i>'];
       case 0:
-        return ['#markup' => '<i>' . $this->t('Root') . '</i>'];
+        return ['#markup' => '<i>' . $this->t('Root', [], ['context' => 'content_hierarchy']) . '</i>'];
       default:
         $content = $this->storage->load($placement, $langcode);
         $ancestors = $this->storage->findAncestors($content);
@@ -169,14 +169,14 @@ class ContentHierarchyWidgets {
     $items = [];
     $items[-1] = [
       'key' => -1,
-      'value' => $this->t('Exclude'),
+      'value' => $this->t('Exclude', [], ['context' => 'content_hierarchy']),
       'prefix' => ' - ',
       'suffix' => ' - ',
       'selected' => ''
     ];
     $items[0] = [
       'key' => 0,
-      'value' => $this->t('Root'),
+      'value' => $this->t('Root', [], ['context' => 'content_hierarchy']),
       'prefix' => ' - ',
       'suffix' => ' - ',
       'selected' => ''
@@ -221,11 +221,11 @@ class ContentHierarchyWidgets {
 
     $element['placement'] = [
       '#type' => 'item',
-      '#title' => $this->t('Placement'),
+      '#title' => $this->t('Placement', [], ['context' => 'content_hierarchy']),
     ];
     $element['placement'][] = $this->buildPlacement($placement, $langcode);
     $element['placement']['change'] = [
-      '#title' => $this->t('Change'),
+      '#title' => $this->t('Change', [], ['context' => 'content_hierarchy']),
       '#type' => 'link',
       '#url' => Url::fromRoute('content_hierarchy.modal.form', [], ['query' => ['langcode' => $langcode, 'content_id' => $content_id ?? 0]]),
       '#attributes' => [

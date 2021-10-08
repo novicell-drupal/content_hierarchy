@@ -87,7 +87,7 @@ class ContentHierarchyModalForm extends FormBase {
       '#attributes' => ['class' => ['content-hierarchy-modal__actions']]
     ];
     $form['actions']['root'] = [
-      '#title' => $this->t('Make root'),
+      '#title' => $this->t('Make root', [], ['context' => 'content_hierarchy']),
       '#type' => 'link',
       '#url' => Url::fromRoute('content_hierarchy.modal.select', [
         'id' => 0,
@@ -99,7 +99,7 @@ class ContentHierarchyModalForm extends FormBase {
       ],
     ];
     $form['actions']['excluded'] = [
-      '#title' => $this->t('Exclude'),
+      '#title' => $this->t('Exclude', [], ['context' => 'content_hierarchy']),
       '#type' => 'link',
       '#url' => Url::fromRoute('content_hierarchy.modal.select', [
         'id' => -1,
