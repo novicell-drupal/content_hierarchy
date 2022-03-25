@@ -109,10 +109,6 @@ msgid "A widget that opens a modal to select an item in the tree."
 msgstr "En widget der åbner en modal til at vælge et punkt i træet."
 
 msgctxt "content_hierarchy"
-msgid "Make root"
-msgstr "Gør til rod"
-
-msgctxt "content_hierarchy"
 msgid "Exclude"
 msgstr "Ekskludér"
 

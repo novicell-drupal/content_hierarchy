@@ -19,6 +19,7 @@
   background-image: url(/modules/contrib/adminimal_admin_toolbar/images/ffffff/file.svg);
 }
 
+/* Shared for modal and overview */
 .button.toggle-item-button {
   padding: 0;
   border: 0;
@@ -29,6 +30,111 @@
   color: #000;
 }
 
-.hierarchy-item .hierarchy-children {
-  padding-left: 20px;
+.button.toggle-item-button.collapse,
+.button.toggle-item-button.expand {
+  width: 15px;
+  height: 9px;
+  background-repeat: no-repeat;
+  padding: 0;
+  margin: 0 8px 0 0;
+  background-size: 100%;
+  vertical-align: middle;
+  background-image: url('../images/000000/down-arrow.svg');
+  opacity: .6;
+}
+
+.button.toggle-item-button.expand {
+  transform: rotate(-90deg);
+  margin-right: 8px;
+  margin-bottom: 1px;
+}
+
+
+/* Overview */
+.hierarchy-item .item-title,
+#content-hierarchy-overview .item-title {
+  color: #000;
+}
+
+#content-hierarchy-overview .item-title {
+  display: inline-block;
+}
+
+#content-hierarchy-overview {
+  overflow-x: auto;
+}
+
+#content-hierarchy-overview tr  {
+  border-bottom: none;
+}
+
+#content-hierarchy-overview tr td  {
+  border-bottom: 1px solid #e6e4df;
+  position: relative;
+}
+
+#content-hierarchy-overview tr td:not(:first-child) {
+  white-space: nowrap;
+}
+
+#content-hierarchy-overview .indent-border-remove {
+  position: absolute;
+  bottom: -1px;
+  background: #fff;
+  height: 1px;
+  left: 0;
+}
+
+#content-hierarchy-overview .inner {
+  display: flex;
+  align-items: flex-start;
+  padding-right: 50px;
+}
+
+#content-hierarchy-overview .link-wrapper {
+  display: flex;
+  align-items: baseline;
+}
+
+#content-hierarchy-overview thead th:first-child {
+  padding-right: 200px;
+}
+
+#content-hierarchy-overview thead th:not(:first-child) {
+  padding-right: 30px;
+}
+
+#content-hierarchy-overview .toggle-item-button,
+#content-hierarchy-overview .indentation {
+  flex-shrink: 0;
+}
+
+#content-hierarchy-overview .ajax-progress-throbber {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+/* Modal */
+.content-hierarchy-modal-form .hierarchy-item .hierarchy-children {
+  padding-left: 25px;
+  margin-top: 7px;
+}
+
+.content-hierarchy-modal-form .hierarchy-item:not(:last-child) {
+  margin-bottom: 10px;
+}
+
+.content-hierarchy-modal-form .hierarchy-item-inner {
+  border-bottom: 1px solid rgb(239 237 237);
+  padding-bottom: 10px;
+}
+
+.content-hierarchy-modal-form .hierarchy-item .root {
+  display: block;
+  font-weight: 700;
+  background-image: url('../images/000000/home.svg');
+  background-repeat: no-repeat;
+  padding-left: 26px;
+  background-size: 19px;
 }

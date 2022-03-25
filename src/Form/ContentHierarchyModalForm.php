@@ -86,18 +86,6 @@ class ContentHierarchyModalForm extends FormBase {
       '#type' => 'actions',
       '#attributes' => ['class' => ['content-hierarchy-modal__actions']]
     ];
-    $form['actions']['root'] = [
-      '#title' => $this->t('Make root', [], ['context' => 'content_hierarchy']),
-      '#type' => 'link',
-      '#url' => Url::fromRoute('content_hierarchy.modal.select', [
-        'id' => 0,
-        'langcode' => $langcode,
-        'content_id' => $content_id ?? 0
-      ]),
-      '#attributes' => [
-        'class' => ['use-ajax', 'button'],
-      ],
-    ];
     $form['actions']['excluded'] = [
       '#title' => $this->t('Exclude', [], ['context' => 'content_hierarchy']),
       '#type' => 'link',
@@ -107,7 +95,34 @@ class ContentHierarchyModalForm extends FormBase {
         'content_id' => $content_id ?? 0
       ]),
       '#attributes' => [
-        'class' => ['use-ajax', 'button'],
+        'class' => ['use-ajax', 'button', 'button--small'],
+      ],
+    ];
+
+    $site_config = $this->config('system.site');
+    $form['root'] = [
+      '#type' => 'container',
+      '#attributes' => [
+        'id' => 'hierarchy-root',
+        'class' => ['hierarchy-item']
+      ],
+      'inner' => [
+        '#type' => 'container',
+        '#attributes' => [
+          'class' => ['hierarchy-item-inner']
+        ],
+        'root' => [
+          '#title' => $site_config->get('name') . ' (' . $this->t('Root', [], ['context' => 'content_hierarchy']) . ')',
+          '#type' => 'link',
+          '#url' => Url::fromRoute('content_hierarchy.modal.select', [
+            'id' => 0,
+            'langcode' => $langcode,
+            'content_id' => $content_id ?? 0
+          ]),
+          '#attributes' => [
+            'class' => ['use-ajax', 'item-title', 'root'],
+          ],
+        ]
       ],
     ];
 

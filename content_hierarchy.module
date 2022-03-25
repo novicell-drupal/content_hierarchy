@@ -101,22 +101,20 @@ function content_hierarchy_preprocess_content_hierarchy_modal_item(&$variables) 
       'content_id' => $content_id ?? 0
     ]),
     '#attributes' => [
-      'class' => ['use-ajax'],
+      'class' => ['use-ajax', 'item-title'],
     ],
   ];
 
   $children = $content->getChildren();
-  if (empty($children)) {
-  } else {
+  if (!empty($children)) {
     if (empty($variables['children'])) {
-      $title = '( + )';
+      $toggle_class = 'expand';
       $route_name = 'content_hierarchy.modal.open';
     } else {
-      $title = '( - )';
+      $toggle_class = 'collapse';
       $route_name = 'content_hierarchy.modal.close';
     }
     $variables['fold_button'] = [
-      '#title' => $title,
       '#type' => 'link',
       '#url' => Url::fromRoute($route_name, [
         'id' => $content->id(),
@@ -124,7 +122,7 @@ function content_hierarchy_preprocess_content_hierarchy_modal_item(&$variables) 
         'content_id' => $content_id ?? 0
       ]),
       '#attributes' => [
-        'class' => ['use-ajax', 'button', 'button--small', 'toggle-item-button'],
+        'class' => ['use-ajax', 'button', 'toggle-item-button', $toggle_class],
       ],
     ];
   }

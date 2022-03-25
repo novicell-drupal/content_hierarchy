@@ -1,5 +1,7 @@
 <div {{ attributes }}>
-  {{ fold_button }} {{ item }}
+  <div class="hierarchy-item-inner">
+    {{ fold_button }} {{ item }}
+  </div>
   {% if children %}
     <div class="hierarchy-children">{{ children }}</div>
   {% endif %}
