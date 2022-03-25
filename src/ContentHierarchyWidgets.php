@@ -2,6 +2,7 @@
 namespace Drupal\content_hierarchy;
 
 use Drupal\Component\Serialization\Json;
+use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Entity\EntityTypeBundleInfoInterface;
 use Drupal\Core\Entity\EntityTypeInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
@@ -47,12 +48,30 @@ class ContentHierarchyWidgets {
    */
   protected $renderer;
 
-  public function __construct(ContentHierarchyStorage $storage, EntityTypeManagerInterface $entityTypeManager, EntityTypeBundleInfoInterface $entityTypeBundleInfo, ContentHierarchyData $data, RendererInterface $renderer) {
+  /**
+   * Config factory.
+   *
+   * @var \Drupal\Core\Config\ConfigFactoryInterface
+   */
+  protected $configFactory;
+
+  public function __construct(ContentHierarchyStorage $storage, EntityTypeManagerInterface $entityTypeManager, EntityTypeBundleInfoInterface $entityTypeBundleInfo, ContentHierarchyData $data, RendererInterface $renderer, ConfigFactoryInterface $configFactory) {
     $this->storage = $storage;
     $this->data = $data;
     $this->entityTypeManager = $entityTypeManager;
     $this->entityTypeBundleInfo = $entityTypeBundleInfo;
     $this->renderer = $renderer;
+    $this->configFactory = $configFactory;
+  }
+
+  /**
+   * The name of root, will be site name.
+   *
+   * @return string
+   *   Site name.
+   */
+  protected function getNameOfRoot() {
+    return $this->configFactory->get('system.site')->get('name') . ' (' . $this->t('Root', [], ['context' => 'content_hierarchy']) . ')';
   }
 
   /**
@@ -65,7 +84,7 @@ class ContentHierarchyWidgets {
    */
   public function getAllOptions($langcode = NULL) {
     $options = [-1 => ' - ' . $this->t('Exclude', [], ['context' => 'content_hierarchy']) . ' - '];
-    $options += [0 => ' - ' . $this->t('Root', [], ['context' => 'content_hierarchy']) . ' - '];
+    $options += [0 => ' - ' . $this->getNameOfRoot() . ' - '];
     // Need to add all possible content IDs so that core will allow the values.
     foreach ($this->data->getAllContentIDs() as $contentID) {
       $options[$contentID] = ' ';
@@ -176,7 +195,7 @@ class ContentHierarchyWidgets {
     ];
     $items[0] = [
       'key' => 0,
-      'value' => $this->t('Root', [], ['context' => 'content_hierarchy']),
+      'value' => $this->getNameOfRoot(),
       'prefix' => ' - ',
       'suffix' => ' - ',
       'selected' => ''

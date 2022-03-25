@@ -45,13 +45,26 @@ class ContentHierarchyOverviewForm extends ContentHierarchyOverviewBase {
 
     $form['content'] = [
       '#type' => 'table',
+      '#responsive' => TRUE,
       '#empty' => $this->t('No content available.'),
       '#header' => [
         'content' => $this->t('Name'),
-        'type' => $this->t('Type'),
-        'status' => $this->t('Status'),
-        'created' => $this->t('Created'),
-        'changed' => $this->t('Changed'),
+        [
+          'data' => $this->t('Type'),
+          'class' => [RESPONSIVE_PRIORITY_MEDIUM],
+        ],
+        [
+          'data' => $this->t('Status'),
+          'class' => [RESPONSIVE_PRIORITY_MEDIUM],
+        ],
+        [
+          'data' => $this->t('Created'),
+          'class' => [RESPONSIVE_PRIORITY_LOW],
+        ],
+        [
+          'data' => $this->t('Changed'),
+          'class' => [RESPONSIVE_PRIORITY_LOW],
+        ],
         'operations' => $this->t('Operations'),
       ],
       '#prefix' => '<div id="content-hierarchy-overview">',
@@ -76,22 +89,47 @@ class ContentHierarchyOverviewForm extends ContentHierarchyOverviewBase {
       $this->contentHierarchyStorage->populateContent($item);
       $form['content'][$key]['#content'] = $item;
 
+      $form['content'][$key]['content']['inner'] = [
+        '#type' => 'container',
+        '#attributes' => [
+          'class' => ['inner']
+        ]
+      ];
+
       if (!is_null($item['depth']) && $item['depth'] > 0) {
-        $form['content'][$key]['content'][] = [
+        $form['content'][$key]['content']['inner'][] = [
           '#theme' => 'indentation',
           '#size' => $item['depth'],
         ];
+        $form['content'][$key]['content']['inner']['indent_border_remove'] = [
+          '#type' => 'container',
+          '#attributes' => [
+            'style' => 'width: ' . (30 * $item['depth']) . 'px',
+            'class' => [
+              'indent-border-remove'
+            ]
+          ]
+        ];
       }
 
+      $form['content'][$key]['content']['inner']['link_wrapper'] = [
+        '#type' => 'container',
+        '#attributes' => [
+          'class' => [
+            'link-wrapper'
+          ]
+        ]
+      ];
+
       if (!empty($item['children'])) {
-        $form['content'][$key]['content'][] = [
+        $form['content'][$key]['content']['inner']['link_wrapper'][] = [
           '#type' => 'submit',
-          '#value' => empty($open_items[$item['content_id']]) ? '( + )' : '( - )',
           '#submit' => ['::toggleItem'],
           '#name' => 'item-' . $item['content_id'],
           '#attributes' => [
             'class' => [
               'toggle-item-button',
+              empty($open_items[$item['content_id']]) ? 'expand' : 'collapse'
             ],
           ],
           '#ajax' => [
@@ -105,10 +143,15 @@ class ContentHierarchyOverviewForm extends ContentHierarchyOverviewBase {
         ];
       }
 
-      $form['content'][$key]['content'][] = [
+      $form['content'][$key]['content']['inner']['link_wrapper'][] = [
         '#type' => 'link',
         '#title' => $item['title'],
         '#url' => $item['url'],
+        '#attributes' => [
+          'class' => [
+            'item-title',
+          ],
+        ],
       ];
 
       $form['content'][$key]['type'] = [
