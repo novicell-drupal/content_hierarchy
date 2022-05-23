@@ -6,5 +6,5 @@ package: Content
 version: '1.4'
 dependencies:
   - content_hierarchy
-  - pathauto
+  - pathauto (>=8.x-1.10)
   - token

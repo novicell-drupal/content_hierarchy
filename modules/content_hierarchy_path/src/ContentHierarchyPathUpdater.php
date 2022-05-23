@@ -109,9 +109,6 @@ class ContentHierarchyPathUpdater {
             $bundles[$id] = $id;
           }
           $id = 'entity_bundle:' . $entity_type_id;
-          if ($entity_type_id == 'node') {
-            $id = 'node_type';
-          }
 
           if (!is_null($instance_id)) {
             $condition = $pattern->getSelectionCondition($instance_id);
