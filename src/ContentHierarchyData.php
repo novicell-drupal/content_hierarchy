@@ -101,7 +101,7 @@ class ContentHierarchyData {
           $items[$content_id]['children'] = [];
         }
         foreach ($items as $content_id => $item) {
-          if ($item['parent_id'] > 0) {
+          if ($item['parent_id'] > 0 && isset($items[$item['parent_id']])) {
             $items[$item['parent_id']]['children'][] = $content_id;
           }
         }

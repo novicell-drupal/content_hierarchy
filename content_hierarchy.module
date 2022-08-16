@@ -115,6 +115,7 @@ function content_hierarchy_preprocess_content_hierarchy_modal_item(&$variables) 
       $route_name = 'content_hierarchy.modal.close';
     }
     $variables['fold_button'] = [
+      '#title' => '',
       '#type' => 'link',
       '#url' => Url::fromRoute($route_name, [
         'id' => $content->id(),
