@@ -1,6 +1,6 @@
 <?php
 
-namespace Drupal\transform_api\Plugin\Transform\Field;
+namespace Drupal\content_hierarchy\Plugin\Transform\Field;
 
 use Drupal\Core\Field\FieldItemInterface;
 use Drupal\Core\Field\FieldItemListInterface;
