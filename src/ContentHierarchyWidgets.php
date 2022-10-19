@@ -346,7 +346,14 @@ class ContentHierarchyWidgets {
    */
   public function getSelectedEntityTypes() {
     $config = \Drupal::config('content_hierarchy.hierarchy_settings');
-    return $config->get('entity_bundles') ?? [];
+    $entityBundles = $config->get('entity_bundles') ?? [];
+    foreach ($entityBundles as $entity_type_id => $bundles) {
+      if (empty($bundles)) {
+        unset($entityBundles[$entity_type_id]);
+      }
+    }
+
+    return $entityBundles;
   }
 
   /**

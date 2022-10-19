@@ -56,8 +56,7 @@ class ContentHierarchyChildrenTransform extends FieldTransformBase {
     /** @var \Drupal\content_hierarchy\ContentHierarchyWidgets $contentHierarchyWidgets */
     $contentHierarchyWidgets = \Drupal::service('content_hierarchy.widgets');
     $entityBundles = $contentHierarchyWidgets->getSelectedEntityTypes();
-
-    if (!in_array($field_definition->getTargetEntityTypeId(), $entityBundles)) {
+    if (!array_key_exists($field_definition->getSetting('target_type'), $entityBundles)) {
       return FALSE;
     }
 
