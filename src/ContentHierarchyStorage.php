@@ -281,8 +281,8 @@ class ContentHierarchyStorage {
     $tags = [
       'content_hierarchy_list:' . $langcode
     ];
-    foreach ($config->get('entity_bundles') ?? [] as $entity_type => $bundle) {
-      $tags[] = $entity_type . '_list';
+    foreach ($config->get('entity_bundles') ?? [] as $entity_type_id => $bundle) {
+      $tags += $this->entityTypeManager->getDefinition($entity_type_id)->getListCacheTags();
     }
     return $tags;
   }

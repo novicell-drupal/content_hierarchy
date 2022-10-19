@@ -340,6 +340,16 @@ class ContentHierarchyWidgets {
   }
 
   /**
+   * Returns a list of entity types and their bundles which are selected to be part of the hierarchy.
+   *
+   * @return array
+   */
+  public function getSelectedEntityTypes() {
+    $config = \Drupal::config('content_hierarchy.hierarchy_settings');
+    return $config->get('entity_bundles') ?? [];
+  }
+
+  /**
    * @param \Drupal\Core\Entity\EntityTypeInterface $entity_type
    *
    * @return bool

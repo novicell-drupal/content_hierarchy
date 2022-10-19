@@ -2,21 +2,23 @@
 
 namespace Drupal\content_hierarchy\Plugin\Transform\Field;
 
+use Drupal\Core\Field\FieldDefinitionInterface;
 use Drupal\Core\Field\FieldItemInterface;
 use Drupal\Core\Field\FieldItemListInterface;
+use Drupal\media\Entity\MediaType;
+use Drupal\media\Plugin\media\Source\OEmbedInterface;
 use Drupal\transform_api\FieldTransformBase;
 
 /**
  * @FieldTransform(
  *  id = "content_hierarchy_children",
- *  title = "Content Hierarchy children",
- *  description = "Renders the children of the referenced entity.",
- *  types = {
+ *  label = @Translation("Content Hierarchy children"),
+ *  field_types = {
  *    "entity_reference"
  *  }
  * )
  */
-class ContentHierarchyChildren extends FieldTransformBase {
+class ContentHierarchyChildrenTransform extends FieldTransformBase {
 
   public function transformElements(FieldItemListInterface $items, $langcode) {
     $values = [];
@@ -45,6 +47,21 @@ class ContentHierarchyChildren extends FieldTransformBase {
       $values[$delta] = $transforms;
     }
     return $values;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public static function isApplicable(FieldDefinitionInterface $field_definition) {
+    /** @var \Drupal\content_hierarchy\ContentHierarchyWidgets $contentHierarchyWidgets */
+    $contentHierarchyWidgets = \Drupal::service('content_hierarchy.widgets');
+    $entityBundles = $contentHierarchyWidgets->getSelectedEntityTypes();
+
+    if (!in_array($field_definition->getTargetEntityTypeId(), $entityBundles)) {
+      return FALSE;
+    }
+
+    return parent::isApplicable($field_definition);
   }
 
 }
