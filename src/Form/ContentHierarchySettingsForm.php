@@ -241,6 +241,7 @@ class ContentHierarchySettingsForm extends ConfigFormBase {
       $bundle_field = $entity_type->getKey('bundle');
       $entity_ids = \Drupal::entityQuery($entity_type->id())
         ->condition($bundle_field, $bundle)
+        ->accessCheck(FALSE)
         ->execute();
       $entities = \Drupal::entityTypeManager()->getStorage($entity_type->id())->loadMultiple($entity_ids);
       $config = $this->config('content_hierarchy.hierarchy_settings');
@@ -280,6 +281,7 @@ class ContentHierarchySettingsForm extends ConfigFormBase {
       $bundle_field = $entity_type->getKey('bundle');
       $entity_ids = \Drupal::entityQuery($entity_type->id())
         ->condition($bundle_field, $bundle)
+        ->accessCheck(FALSE)
         ->execute();
       $content_ids = $this->contentHierarchyData()->findEntityIds($entity_type->id(), $entity_ids);
       $this->contentHierarchyData()->deleteMultiple($content_ids);
