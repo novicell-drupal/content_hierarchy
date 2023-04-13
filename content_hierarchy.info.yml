@@ -3,7 +3,7 @@ description: 'Provides the functionality to organize nodes in a tree/hierarchy.'
 package: Content
 type: module
 version: "1.5"
-core_version_requirement: ^9 || 10
+core_version_requirement: ^9 || ^10
 configure: content_hierarchy.hierarchy_settings
 
 dependencies:
