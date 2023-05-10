@@ -78,8 +78,8 @@ class ContentHierarchyController extends ControllerBase {
       '#theme' => 'content_hierarchy_options',
       '#langcode' => $langcode
     ];
-    if ($langcode == $current_lang) {
-      $build['#content_id'] = $content_id;
+    if ($langcode == $current_lang && $content_id > 0) {
+      $build['#content_id'] = intval($content_id);
     }
     return new HtmlResponse($this->renderer->renderRoot($build));
   }
