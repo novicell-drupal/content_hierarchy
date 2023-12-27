@@ -231,6 +231,9 @@ class ContentHierarchySettingsForm extends ConfigFormBase {
       }
     }
 
+    // Rebuild the menu links due to the override_content_menu_item setting.
+    \Drupal::service('plugin.manager.menu.link')->rebuild();
+
     parent::submitForm($form, $form_state);
   }
 
