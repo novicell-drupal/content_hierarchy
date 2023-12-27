@@ -134,15 +134,24 @@ function content_hierarchy_preprocess_content_hierarchy_modal_item(&$variables) 
  * Implements hook_menu_links_discovered_alter().
  */
 function content_hierarchy_menu_links_discovered_alter(&$links) {
-  foreach ($links as $id => $link) {
-    if (isset($link['parent']) && $link['parent'] == 'system.admin_content') {
-      $links[$id]['parent'] = 'content_hierarchy.content_overview';
+  $config = Drupal::config('content_hierarchy.hierarchy_settings');
+
+  if ($config->get('override_content_menu_item')) {
+    // Change parent of content links to content overview.
+    foreach ($links as $id => $link) {
+      if (isset($link['parent']) && $link['parent'] == 'system.admin_content') {
+        $links[$id]['parent'] = 'content_hierarchy.content_overview';
+      }
     }
-  }
-  if (isset($links['system.admin_content'])) {
-    $links['system.admin_content']['parent'] = 'content_hierarchy.content_overview';
-    $links['system.admin_content']['weight'] = 101;
-    $links['system.admin_content']['title'] = t('All content');
+    // Replace content link with new content link.
+    if (isset($links['system.admin_content'])) {
+      $links['system.admin_content']['parent'] = 'content_hierarchy.content_overview';
+      $links['system.admin_content']['weight'] = 101;
+      $links['system.admin_content']['title'] = t('All content');
+    }
+  } else {
+    // Remove override content link.
+    unset($links['content_hierarchy.content_overview']);
   }
 }
 

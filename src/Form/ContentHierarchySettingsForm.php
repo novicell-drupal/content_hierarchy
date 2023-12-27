@@ -139,6 +139,13 @@ class ContentHierarchySettingsForm extends ConfigFormBase {
       '#default_value' => $config->get('multilingual') ?? TRUE
     ];
 
+    $form['override_content_menu_item'] = [
+      '#type' => 'checkbox',
+      '#title' => $this->t('Override content menu link'),
+      '#description' => $this->t('Override the default menu links for content.'),
+      '#default_value' => $config->get('override_content_menu_item') ?? FALSE,
+    ];
+
     $form['entity_bundles'] = array(
       '#type' => 'details',
       '#title' => $this->t('Entity types'),
@@ -169,6 +176,7 @@ class ContentHierarchySettingsForm extends ConfigFormBase {
     $config = $this->config('content_hierarchy.hierarchy_settings');
 
     $config->set('contents_per_page_admin', $form_state->getValue('contents_per_page_admin'));
+    $config->set('override_content_menu_item', $form_state->getValue('override_content_menu_item'));
 
     $multilingual = $form_state->getValue('multilingual') == 1;
     if ($config->get('multilingual') != $multilingual) {
