@@ -1,4 +1,5 @@
 <?php
+
 namespace Drupal\content_hierarchy\Plugin\Field\FieldType;
 
 use Drupal;
@@ -45,6 +46,18 @@ class ContentHierarchyType extends FieldItemBase {
     parent::__construct($definition, $name, $parent);
     $this->data = \Drupal::service('content_hierarchy.data');
     $this->storage = \Drupal::service('content_hierarchy.storage');
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function preSave() {
+    parent::preSave();
+
+    // Save new_parent value to the field value.
+    if (($this->values['new_parent'] ?? '') !== '') {
+      $this->values['value'] = $this->values['new_parent'];
+    }
   }
 
   /**
@@ -148,4 +161,5 @@ class ContentHierarchyType extends FieldItemBase {
     }
     return is_null($this->data->findEntity($this->getEntity()));
   }
+
 }
