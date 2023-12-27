@@ -96,3 +96,11 @@ function content_hierarchy_update_8001() {
   $configFactory = \Drupal::configFactory();
   $configFactory->getEditable('content_hierarchy.hierarchy_settings')->clear('overview_type');
 }
+
+function content_hierarchy_update_8002() {
+  $configFactory = \Drupal::configFactory();
+  $config = $configFactory->getEditable('content_hierarchy.hierarchy_settings');
+
+  $config->set('override_content_menu_item', 1);
+  $config->save();
+}
