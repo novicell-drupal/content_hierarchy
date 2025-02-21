@@ -285,7 +285,7 @@ class ContentHierarchyWidgets {
         }
       }
       if (!empty($build['#children'])) {
-        $build['#children'] = $this->renderer->renderPlain($build['#children']);
+        $build['#children'] = $this->renderer->renderInIsolation($build['#children']);
       }
     }
     return $build;

@@ -1,8 +1,8 @@
 name: 'Content Hierarchy Breadcrumb'
 type: module
 description: 'Creates breadcrumbs based on content hierarchy'
-core_version_requirement: ^9 || ^10
+core_version_requirement: ^10 || ^11
 package: 'Content'
-version: '1.5'
+version: '1.6'
 dependencies:
   - content_hierarchy:content_hierarchy

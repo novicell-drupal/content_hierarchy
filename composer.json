@@ -9,7 +9,6 @@
     "homepage": "https://www.novicell.dk",
     "minimum-stability": "dev",
     "require": {
-        "drupal/core": "^9 || ^10",
         "drupal/token": "~1.0",
         "drupal/pathauto": "~1.0"
     }
