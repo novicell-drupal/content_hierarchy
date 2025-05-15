@@ -36,7 +36,11 @@ class ContentHierarchyChildrenTransform extends FieldTransformBase {
         if (!is_null($content)) {
           $children = $content->getChildren() ?? [];
           foreach ($children as $child) {
-            $transforms[] = new \Drupal\transform_api\Transform\EntityTransform($child->getEntityType(), $child->getEntityId(), $view_mode);
+            if (method_exists(\Drupal\transform_api\Transform\EntityTransform::class, 'createFromEntity')) {
+              $transforms[] = new \Drupal\transform_api\Transform\EntityTransform($child->getEntityType(), $child->getEntityId(), $view_mode);
+            } else {
+              $transforms[] = new \Drupal\transform_api\Transform\EntityTransform($child, $view_mode);
+            }
           }
 
           // Set a cache tags, so it is possible to invalidate it,
