@@ -1,0 +1,4 @@
+content_hierarchy:
+  label: 'Content Hierarchy'
+  description: 'Field to store position in the Content Hierarchy.'
+  weight: 40

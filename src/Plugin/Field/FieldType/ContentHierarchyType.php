@@ -18,7 +18,7 @@ use Drupal\Core\TypedData\TypedDataInterface;
  *   module = "content_hierarchy",
  *   label = @Translation("Content Hierarchy"),
  *   description = @Translation("Entity placement in the Content Hierarchy."),
- *   category = @Translation("Content Hierarchy"),
+ *   category = "content_hierarchy",
  *   default_widget = "content_hierarchy_modal",
  *   default_formatter = "integer"
  * )
