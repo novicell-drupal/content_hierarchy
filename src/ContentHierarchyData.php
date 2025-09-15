@@ -61,6 +61,7 @@ class ContentHierarchyData {
         $alias = $query->innerJoin('content_hierarchy_placement', 'chp', "ch.content_id = %alias.content_id AND %alias.langcode = '" . $langcode . "'");
         $lists[$cid] = $query
           ->fields($alias)
+          ->addTag('content_hierarchy_get_language_list')
           ->orderBy($alias . '.weight', 'ASC')
           ->orderBy($alias . '.content_id', 'ASC')
           ->execute()
@@ -143,9 +144,10 @@ class ContentHierarchyData {
     $langcode = $this->correctLangCode($langcode);
     $parents = $this->database->select('content_hierarchy_placement', 'chp')
       ->fields('chp', ['content_id'])
-      ->condition('langcode', $langcode)
-      ->condition('parent_id', array_keys($open_items), 'IN')
-      ->condition('excluded', 0)
+      ->addTag('content_hierarchy_get_language_list_wd_parents')
+      ->condition('chp.langcode', $langcode)
+      ->condition('chp.parent_id', array_keys($open_items), 'IN')
+      ->condition('chp.excluded', 0)
       ->execute()
       ->fetchCol();
     $parents[] = 0;
@@ -155,6 +157,7 @@ class ContentHierarchyData {
     $alias = $query->innerJoin('content_hierarchy_placement', 'chp', "ch.content_id = %alias.content_id AND %alias.langcode = '" . $langcode . "'");
     $items = $query
       ->fields($alias)
+      ->addTag('content_hierarchy_get_language_list_wd_items')
       ->condition($alias . '.parent_id', $parents, 'IN')
       ->condition($alias . '.excluded', 0)
       ->orderBy($alias . '.weight', 'ASC')
