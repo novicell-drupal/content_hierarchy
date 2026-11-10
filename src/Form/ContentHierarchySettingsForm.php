@@ -7,6 +7,7 @@ use Drupal\content_hierarchy\ContentHierarchyWidgets;
 use Drupal\content_moderation\ModerationInformationInterface;
 use Drupal\Core\Cache\Cache;
 use Drupal\Core\Config\ConfigFactoryInterface;
+use Drupal\Core\Config\TypedConfigManagerInterface;
 use Drupal\Core\Entity\ContentEntityInterface;
 use Drupal\Core\Entity\EntityTypeBundleInfoInterface;
 use Drupal\Core\Entity\EntityTypeInterface;
@@ -57,6 +58,7 @@ class ContentHierarchySettingsForm extends ConfigFormBase {
   public static function create(ContainerInterface $container) {
     return new static(
       $container->get('config.factory'),
+      $container->get('config.typed'),
       $container->get('content_hierarchy.data'),
       $container->get('content_hierarchy.widgets'),
       $container->get('entity_type.manager'),
@@ -68,8 +70,8 @@ class ContentHierarchySettingsForm extends ConfigFormBase {
   /**
    * {@inheritdoc}
    */
-  public function __construct(ConfigFactoryInterface $config_factory, ContentHierarchyData $contentHierarchyData, ContentHierarchyWidgets $contentHierarchyWidgets, EntityTypeManagerInterface $entityTypeManager, EntityTypeBundleInfoInterface $entityTypeBundleInfo, MessengerInterface $messenger) {
-    parent::__construct($config_factory);
+  public function __construct(ConfigFactoryInterface $config_factory, TypedConfigManagerInterface $typed_config_manager, ContentHierarchyData $contentHierarchyData, ContentHierarchyWidgets $contentHierarchyWidgets, EntityTypeManagerInterface $entityTypeManager, EntityTypeBundleInfoInterface $entityTypeBundleInfo, MessengerInterface $messenger) {
+    parent::__construct($config_factory, $typed_config_manager);
     $this->contentHierarchyWidgets = $contentHierarchyWidgets;
     $this->contentHierarchyData = $contentHierarchyData;
     $this->messenger = $messenger;
